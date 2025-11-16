@@ -245,10 +245,10 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
       <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
         <div className={`max-w-[85%] ${isUser ? 'order-2' : 'order-1'}`}>
           <div
-            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap transition-all duration-200 ${
               isUser
-                ? 'bg-[#1a73e8] text-white'
-                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                ? 'bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 hover:bg-indigo-500/40'
+                : 'bg-indigo-500/15 border border-indigo-500/30 text-indigo-50 shadow-md shadow-indigo-500/10'
             }`}
           >
             {!isUser && (
@@ -266,10 +266,10 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
   return (
     <div className="h-full flex flex-col bg-black max-w-3xl mx-auto">
       {/* Header - Gemini-powered */}
-      <div className="px-6 py-3 border-b border-[#1f1f1f] flex items-center justify-between bg-black">
-        <div className="text-xs text-gray-400">
+      <div className="px-6 py-3 border-b border-indigo-500/20 flex items-center justify-between bg-black">
+        <div className="text-xs">
           {apiKeyConfigured ? (
-            <span className="text-emerald-400">✓ Powered by Google Gemini</span>
+            <span className="text-indigo-300">✓ Powered by Google Gemini</span>
           ) : (
             <span className="text-amber-400">⚠️ Gemini API key not configured</span>
           )}
@@ -287,18 +287,18 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
               {error && (
                 <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
                   <p className="text-amber-400 text-sm font-medium mb-2">⚠️ Configuration Required</p>
-                  <p className="text-gray-300 text-xs">{error}</p>
-                  <p className="text-gray-400 text-xs mt-2">
-                    Add the API key to <code className="bg-black/50 px-1 rounded">backend/.env</code> and restart the server.
+                  <p className="text-indigo-100 text-xs">{error}</p>
+                  <p className="text-indigo-200/70 text-xs mt-2">
+                    Add the API key to <code className="bg-indigo-500/20 px-1 rounded text-indigo-200">backend/.env</code> and restart the server.
                   </p>
                 </div>
               )}
-              <p className="text-gray-400 text-sm mb-6">
+              <p className="text-indigo-200/80 text-sm mb-6">
                 {status === 'fallback'
                   ? 'Gemini is offline, but I still have curated strategies ready. Ask away.'
                   : status === 'error'
                   ? 'Please configure Gemini API key to use the AI Assistant.'
-                  : "Start a conversation about your portfolio, allocations, or crypto strategy."}
+                  : "Start a conversation about your portfolio, allocations, or blockchain strategy."}
               </p>
               {/* Suggested prompts - Minimal */}
               <div className="flex flex-wrap gap-2 justify-center">
@@ -307,7 +307,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
                     key={prompt}
                     type="button"
                     onClick={() => setInput(prompt)}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-[#1f1f1f] bg-[#0f0f0f] text-gray-300 hover:text-white hover:border-[#2a2a2a] transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-200 hover:text-indigo-100 hover:border-indigo-500/40 hover:bg-indigo-500/20 transition-colors"
                   >
                     {prompt}
                   </button>
@@ -321,7 +321,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-[#0f0f0f] rounded-2xl px-4 py-3 text-sm text-gray-300">
+            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-4 py-3 text-sm text-indigo-200">
               <span className="inline-flex items-center gap-2">
                 <span className="w-1 h-1 bg-gray-300 rounded-full animate-pulse"></span>
                 <span className="w-1 h-1 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
@@ -334,18 +334,26 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
 
       {/* Status and notes - Minimal */}
       {(note || error) && (
-        <div className="px-4 py-2 border-t border-[#1f1f1f]">
+        <div className="px-4 py-2 border-t border-indigo-500/20">
           {note && (
-            <div className="text-[10px] text-amber-400 mb-1">{note}</div>
+            <div className="text-center text-xs text-indigo-300/70 mb-2">
+              {note}
+            </div>
+          )}
+          {meta && (
+            <div className="text-center text-[10px] text-indigo-400/60 mb-2">
+              {meta.source === 'gemini' && `Powered by Gemini ${meta.model || ''}`}
+              {meta.source === 'fallback' && `Offline mode`}
+            </div>
           )}
           {error && (
-            <div className="text-[10px] text-rose-400">{error}</div>
+            <div className="text-[10px] text-amber-400">{error}</div>
           )}
         </div>
       )}
 
       {/* Input area - Gemini dark mode - Fixed at bottom */}
-      <div className="border-t border-[#1f1f1f] bg-black px-4 py-3">
+      <div className="border-t border-indigo-500/20 bg-black px-4 py-3">
         <form onSubmit={handleSend} className="max-w-3xl mx-auto">
           <div className="flex items-end gap-2">
             <div className="flex-1 relative">
@@ -359,8 +367,8 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
                     handleSend(event);
                   }
                 }}
-                placeholder={activeWalletAddress && isConnected ? 'Message Phanta (powered by Gemini)...' : 'Connect a wallet to start chatting.'}
-                className="w-full bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-sm text-white placeholder-gray-500 px-4 py-2.5 pr-20 focus:outline-none focus:border-[#2a2a2a] resize-none"
+                      placeholder={activeWalletAddress && isConnected ? 'Message Phanta (powered by Gemini)...' : 'Connect a wallet to start chatting.'}
+                      className="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm text-indigo-100 placeholder-indigo-300/50 px-4 py-2.5 pr-20 focus:outline-none focus:border-indigo-500/40 focus:bg-indigo-500/15 resize-none"
                 rows={1}
                 disabled={!activeWalletAddress || !isConnected || loading}
               />
@@ -369,8 +377,8 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
               </div>
             </div>
             <button
-              type="submit"
-              className="px-4 py-2.5 rounded-xl text-sm font-normal bg-[#1a73e8] text-white hover:bg-[#1557b0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    type="submit"
+                    className="px-4 py-2.5 rounded-xl text-sm font-normal bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 hover:bg-indigo-500/40 hover:border-indigo-500/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!activeWalletAddress || !isConnected || loading || !input.trim()}
             >
               {loading ? '...' : 'Send'}

@@ -191,7 +191,7 @@ router.post('/crypto/metrics', async (req, res) => {
     const statusCode = error.errors ? 207 : 400;
     res.status(statusCode).json({
       success: false,
-      message: error.message || 'Unable to analyse the requested cryptocurrencies right now.',
+      message: error.message || 'Unable to analyse the requested blockchain assets right now.',
       errors: error.errors || []
     });
   }

@@ -308,12 +308,12 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch crypto metrics');
+        throw new Error(data.message || 'Failed to fetch blockchain metrics');
       }
 
       return data;
     } catch (error) {
-      console.error('Error fetching crypto metrics:', error);
+      console.error('Error fetching blockchain metrics:', error);
       throw error;
     }
   }

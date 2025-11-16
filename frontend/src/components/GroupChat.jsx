@@ -87,16 +87,16 @@ const GroupChat = ({ groupId, groupName }) => {
   return (
     <div className="h-full flex flex-col bg-black">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1f1f1f] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-indigo-500/20 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-gray-200">{groupName}</h3>
-          <p className="text-xs text-gray-500">Group Chat</p>
+          <h3 className="text-sm font-medium text-indigo-100">{groupName}</h3>
+          <p className="text-xs text-indigo-300/70">Group Chat</p>
         </div>
         
         {/* AI Status */}
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${aiEnabled ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-          <span className="text-xs text-gray-400">Powered by Gemini</span>
+          <div className={`w-2 h-2 rounded-full ${aiEnabled ? 'bg-indigo-400' : 'bg-indigo-500/30'}`} />
+          <span className="text-xs text-indigo-300/70">Powered by Gemini</span>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ const GroupChat = ({ groupId, groupName }) => {
         className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
       >
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 text-sm py-8">
+          <div className="text-center text-indigo-300/70 text-sm py-8">
             <p>Start chatting with your group</p>
             <p className="text-xs mt-2">Mention @gemini or @ai to add Gemini AI to the conversation</p>
           </div>
@@ -120,10 +120,10 @@ const GroupChat = ({ groupId, groupName }) => {
             <div
               className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                 msg.type === 'user'
-                  ? 'bg-[#1a73e8] text-white'
+                  ? 'bg-indigo-500/30 border border-indigo-500/40 text-indigo-100'
                   : msg.type === 'ai'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : 'bg-[#0f0f0f] text-gray-200 border border-[#1f1f1f]'
+                  ? 'bg-indigo-500/15 border border-indigo-500/30 text-indigo-50'
+                  : 'bg-indigo-500/10 text-indigo-200 border border-indigo-500/20'
               }`}
             >
               {msg.type === 'ai' && (
@@ -141,7 +141,7 @@ const GroupChat = ({ groupId, groupName }) => {
       </div>
 
       {/* Input */}
-      <div className="border-t border-[#1f1f1f] bg-black px-4 py-3">
+      <div className="border-t border-indigo-500/20 bg-black px-4 py-3">
         <form onSubmit={handleSend}>
           <div className="flex items-end gap-2">
             <div className="flex-1 relative">
@@ -156,13 +156,13 @@ const GroupChat = ({ groupId, groupName }) => {
                   }
                 }}
                 placeholder="Type @gemini or @ai to add Gemini AI to the conversation..."
-                className="w-full bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-sm text-white placeholder-gray-500 px-4 py-2.5 focus:outline-none focus:border-[#2a2a2a] resize-none"
+                className="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm text-indigo-100 placeholder-indigo-300/50 px-4 py-2.5 focus:outline-none focus:border-indigo-500/40 focus:bg-indigo-500/15 resize-none"
                 rows={1}
               />
             </div>
             <button
               type="submit"
-              className="px-4 py-2.5 rounded-xl text-sm font-normal bg-[#1a73e8] text-white hover:bg-[#1557b0] transition-colors disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl text-sm font-normal bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 hover:bg-indigo-500/40 hover:border-indigo-500/60 transition-colors disabled:opacity-50"
               disabled={!input.trim()}
             >
               Send

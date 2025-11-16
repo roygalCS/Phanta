@@ -10,6 +10,7 @@ import Tooltip from './Tooltip';
 import HelpModal from './HelpModal';
 import { useToast } from '../hooks/useToast';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import apiService from '../services/api';
 import geminiLogo from '../assets/gemini-logo.svg';
 
 const Layout = () => {
@@ -18,6 +19,7 @@ const Layout = () => {
   const { account, balance, disconnectWallet, connectWallet, userData, isConnected } = useWallet();
   const { toasts, removeToast, success, info } = useToast();
   const [showHelp, setShowHelp] = useState(false);
+  const [overviewBalance, setOverviewBalance] = useState(null);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -38,6 +40,31 @@ const Layout = () => {
     //   info('Press Ctrl+K to focus AI Assistant, Ctrl+/ for shortcuts');
     // }
   }, [activePage, info]);
+
+  // Fetch overview balance to match Overview display
+  useEffect(() => {
+    const fetchOverviewBalance = async () => {
+      if (!account) {
+        setOverviewBalance(null);
+        return;
+      }
+      
+      try {
+        const response = await apiService.getPortfolioOverview(account);
+        if (response?.overview?.balances?.crypto?.amount) {
+          setOverviewBalance(response.overview.balances.crypto.amount);
+        }
+      } catch (error) {
+        console.error('Error fetching overview balance:', error);
+        // Keep using wallet balance if overview fetch fails
+      }
+    };
+
+    fetchOverviewBalance();
+    // Refresh balance every 30 seconds
+    const interval = setInterval(fetchOverviewBalance, 30000);
+    return () => clearInterval(interval);
+  }, [account]);
 
   const navigationItems = useMemo(
     () => [
@@ -110,7 +137,11 @@ const Layout = () => {
               </button>
             )}
             <div className="flex items-center gap-2.5 bg-[#0f0f0f] px-4 py-2.5 rounded-xl border border-[#1f1f1f] hover:border-[#2a2a2a] transition-colors">
-              <span className="text-sm text-gray-100 font-medium">{balance || '0.0000'} SOL</span>
+              <span className="text-sm text-gray-100 font-medium">
+                {overviewBalance !== null 
+                  ? `${overviewBalance.toFixed(4)} SOL` 
+                  : `${balance || '0.0000'} SOL`}
+              </span>
             </div>
             {isConnected && (
               <button
@@ -167,10 +198,8 @@ const Layout = () => {
                   onClick={() => setActivePage(item.id)}
                   className={`px-6 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                     activePage === item.id
-                      ? item.primary
-                        ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white shadow-lg shadow-purple-500/40 scale-[1.02]'
-                        : 'bg-[#1a73e8] text-white shadow-md shadow-blue-500/30 scale-[1.02]'
-                      : 'bg-[#0f0f0f] text-gray-300 hover:text-white hover:bg-[#1a1a1a] border border-[#1f1f1f] hover:border-[#2a2a2a]'
+                      ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 shadow-md shadow-indigo-500/20 scale-[1.02]'
+                      : 'bg-[#0f0f0f] text-gray-300 hover:text-indigo-300 hover:bg-[#1a1a1a] border border-[#1f1f1f] hover:border-indigo-500/30'
                   }`}
                 >
                   <span className="flex items-center gap-2.5">

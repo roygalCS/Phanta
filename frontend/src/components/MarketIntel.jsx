@@ -125,7 +125,7 @@ const MarketIntel = () => {
       .filter(Boolean);
 
     if (!symbols.length) {
-      setError('Add at least one cryptocurrency to analyse.');
+      setError('Add at least one blockchain asset to analyse.');
       setInsights(null);
       return;
     }
@@ -135,13 +135,26 @@ const MarketIntel = () => {
     setPartialErrors([]);
 
     try {
+      console.log('[MarketIntel] Fetching data for:', { symbols, range, interval });
       const response = await apiService.getCryptoMetrics({ symbols, range, interval });
+      console.log('[MarketIntel] Response received:', response);
+      
+      if (!response || !response.data || response.data.length === 0) {
+        // Check if it's a rate limit issue
+        if (response?.errors?.some(e => e.message?.includes('Rate limit'))) {
+          throw new Error('CoinGecko API rate limit exceeded. The free tier allows ~10-30 calls/minute. Please wait 1-2 minutes and try again, or reduce the number of blockchain assets.');
+        }
+        throw new Error('No data could be fetched for any of the requested blockchain assets. Please check the symbols and try again.');
+      }
+      
       setInsights(response);
       setPartialErrors(response.errors || []);
     } catch (err) {
+      console.error('[MarketIntel] Error:', err);
       setInsights(null);
       setPartialErrors([]);
-      setError(err.message || 'Unable to load crypto market intelligence right now.');
+      const errorMessage = err.response?.data?.message || err.message || 'Unable to load blockchain market intelligence right now.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -373,38 +386,46 @@ const MarketIntel = () => {
     : null;
 
   const loadingState = (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 animate-pulse">
-      <div className="h-6 bg-slate-800 rounded w-48 mb-4" />
-      <div className="h-64 bg-slate-900 rounded-xl" />
+    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 animate-pulse">
+      <div className="h-6 bg-indigo-500/20 rounded w-48 mb-4" />
+      <div className="h-64 bg-indigo-500/10 rounded-xl" />
     </div>
   );
 
   return (
-    <div className="px-[5vw] py-10 bg-slate-950 text-slate-100 min-h-full">
+    <div className="px-[5vw] py-10 bg-black text-indigo-50 min-h-full">
       <div className="max-w-6xl space-y-6">
-        <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur">
+        <section className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-slate-100">Crypto Market Intelligence</h3>
-              <p className="text-sm text-slate-400">
-                Pull live cryptocurrency pricing, volatility, and distribution stats from CoinGecko to analyze market trends.
+              <h3 className="text-xl font-semibold text-indigo-100">Blockchain Market Intelligence</h3>
+              <p className="text-sm text-indigo-200/80">
+                Pull live blockchain asset pricing, volatility, and distribution stats from CoinGecko to analyze market trends.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <label className="flex flex-col gap-1 text-xs uppercase tracking-widest text-slate-400">
-                Cryptocurrencies
-                <input
-                  type="text"
-                  value={symbolsInput}
-                  onChange={(event) => setSymbolsInput(event.target.value)}
-                  placeholder="SOL, BTC, ETH"
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
-                  disabled={loading}
-                />
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-widest text-indigo-200/70">
+                Blockchain Assets
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={symbolsInput}
+                    onChange={(event) => setSymbolsInput(event.target.value)}
+                    placeholder="SOL, BTC, ETH"
+                    className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 text-sm text-indigo-100 placeholder-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40 w-full"
+                    disabled={loading}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-indigo-300/70">
+                    {symbolsInput.split(',').filter(s => s.trim()).length} selected
+                  </span>
+                </div>
+                <p className="text-[10px] text-indigo-300/60 mt-1">
+                  💡 Tip: CoinGecko free tier limits requests. Use 1-2 symbols for faster results.
+                </p>
               </label>
 
-              <label className="flex flex-col gap-1 text-xs uppercase tracking-widest text-slate-400">
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-widest text-indigo-200/70">
                 Range
                 <div className="flex gap-2">
                   {RANGE_OPTIONS.map((option) => (
@@ -414,8 +435,8 @@ const MarketIntel = () => {
                       onClick={() => setRange(option.value)}
                       className={`px-3 py-2 rounded-xl text-xs font-medium transition-colors border ${
                         range === option.value
-                          ? 'bg-indigo-500 text-white border-indigo-400'
-                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-slate-100'
+                          ? 'bg-indigo-500/30 border-indigo-500/40 text-indigo-100'
+                          : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-200/70 hover:text-indigo-100 hover:border-indigo-500/30'
                       }`}
                       disabled={loading}
                     >
@@ -428,7 +449,7 @@ const MarketIntel = () => {
               <button
                 type="button"
                 onClick={fetchMarketIntel}
-                className="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2 rounded-xl text-sm font-medium transition-colors border border-indigo-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="bg-indigo-500/30 border border-indigo-500/40 hover:bg-indigo-500/40 hover:border-indigo-500/60 text-indigo-100 px-6 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={loading}
               >
                 {loading ? 'Fetching…' : 'Refresh'}
@@ -457,9 +478,9 @@ const MarketIntel = () => {
           {loading && loadingState}
 
           {!loading && priceChartData && (
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur">
+            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold text-slate-100">Price trajectory</h4>
+                <h4 className="text-lg font-semibold text-indigo-100">Price trajectory</h4>
                 <span className="text-xs uppercase tracking-widest text-indigo-300">
                   {displayRangeLabel} • Interval {interval.toUpperCase()}
                 </span>
@@ -472,17 +493,17 @@ const MarketIntel = () => {
         </section>
 
         {!loading && metricSummaries.length > 0 && (
-          <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur">
-            <h4 className="text-lg font-semibold text-slate-100 mb-4">Distribution stats</h4>
+          <section className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur">
+            <h4 className="text-lg font-semibold text-indigo-100 mb-4">Distribution stats</h4>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {metricSummaries.map(({ symbol, metrics, meta }) => (
                 <article
                   key={symbol}
-                  className="border border-slate-800 bg-slate-950/80 rounded-2xl p-4 flex flex-col gap-3"
+                  className="border border-indigo-500/20 bg-indigo-500/10 rounded-2xl p-4 flex flex-col gap-3"
                 >
                   <header className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-100">{symbol}</span>
-                    <span className="text-xs uppercase tracking-widest text-slate-500">
+                    <span className="text-sm font-semibold text-indigo-100">{symbol}</span>
+                    <span className="text-xs uppercase tracking-widest text-indigo-300/70">
                       {meta?.currency || 'USD'}
                     </span>
                   </header>
@@ -491,10 +512,10 @@ const MarketIntel = () => {
                     {formatCurrency(metrics.lastClose, meta?.currency || 'USD')}
                   </div>
 
-                  <dl className="grid grid-cols-2 gap-3 text-xs text-slate-400">
+                  <dl className="grid grid-cols-2 gap-3 text-xs text-indigo-200/80">
                     <div>
                       <dt className="uppercase tracking-widest">Return Δ</dt>
-                      <dd className={`${metrics.priceChangePercent >= 0 ? 'text-emerald-300' : 'text-rose-300'} font-medium`}>
+                      <dd className={`${metrics.priceChangePercent >= 0 ? 'text-indigo-200' : 'text-indigo-300/70'} font-medium`}>
                         {formatPercent(metrics.priceChangePercent)}
                       </dd>
                     </div>
@@ -534,11 +555,11 @@ const MarketIntel = () => {
         )}
 
         {correlationTable && (
-          <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur space-y-6">
+          <section className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur space-y-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h4 className="text-lg font-semibold text-slate-100">Correlation surfaces</h4>
-                <p className="text-sm text-slate-400">
+                <h4 className="text-lg font-semibold text-indigo-100">Correlation surfaces</h4>
+                <p className="text-sm text-indigo-200/80">
                   Rolling and aggregate correlations help you spot co-movement and hedging potential in minutes.
                 </p>
               </div>
@@ -549,9 +570,9 @@ const MarketIntel = () => {
                 <table className="w-full text-sm border-separate" style={{ borderSpacing: '0 6px' }}>
                   <thead>
                     <tr>
-                      <th className="text-left text-xs uppercase tracking-widest text-slate-400 px-2">Crypto</th>
+                      <th className="text-left text-xs uppercase tracking-widest text-indigo-200/70 px-2">Asset</th>
                       {correlationTable.map(({ symbol }) => (
-                        <th key={symbol} className="text-xs uppercase tracking-widest text-slate-400 px-2 text-center">
+                        <th key={symbol} className="text-xs uppercase tracking-widest text-indigo-200/70 px-2 text-center">
                           {symbol}
                         </th>
                       ))}
@@ -560,7 +581,7 @@ const MarketIntel = () => {
                   <tbody>
                     {correlationTable.map((row) => (
                       <tr key={row.symbol}>
-                        <td className="px-2 py-2 font-medium text-slate-200 whitespace-nowrap">{row.symbol}</td>
+                        <td className="px-2 py-2 font-medium text-indigo-100 whitespace-nowrap">{row.symbol}</td>
                         {row.values.map((value, idx) => (
                           <td
                             key={`${row.symbol}-${idx}`}
@@ -587,7 +608,7 @@ const MarketIntel = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 text-sm text-slate-500 flex items-center justify-center">
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 text-sm text-indigo-300/70 flex items-center justify-center">
                   Add a second ticker to unlock rolling correlation trends.
                 </div>
               )}
@@ -596,22 +617,22 @@ const MarketIntel = () => {
         )}
 
         {currentRegression && regressionChartData && regressionChartOptions && (
-          <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur space-y-6">
+          <section className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur space-y-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h4 className="text-lg font-semibold text-slate-100">Regression & beta mapping</h4>
-                <p className="text-sm text-slate-400">
+                <h4 className="text-lg font-semibold text-indigo-100">Regression & beta mapping</h4>
+                <p className="text-sm text-indigo-200/80">
                   Linear regression on log returns surfaces betas, alpha drift, and co-movement confidence.
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <label className="text-xs uppercase tracking-widest text-slate-400">
+                <label className="text-xs uppercase tracking-widest text-indigo-200/70">
                   Pair
                   <select
                     value={Math.min(activeRegressionIndex, regressionAnalytics.length - 1)}
                     onChange={(event) => setActiveRegressionIndex(Number(event.target.value))}
-                    className="ml-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+                    className="ml-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-2 text-sm text-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40"
                   >
                     {regressionAnalytics.map((entry, index) => (
                       <option key={entry.pair.join('-')} value={index}>
@@ -624,32 +645,32 @@ const MarketIntel = () => {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-              <div className="h-80 bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+              <div className="h-80 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4">
                 <Scatter data={regressionChartData} options={regressionChartOptions} />
               </div>
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-4 text-sm text-slate-300">
+              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 space-y-4 text-sm text-indigo-200">
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-slate-500">β / α</p>
+                  <p className="text-xs uppercase tracking-widest text-indigo-300/70">β / α</p>
                   <p className="text-lg font-semibold text-indigo-200">
                     {formatNumber(currentRegression.beta)} / {formatNumber(currentRegression.alpha)}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-slate-500">R²</p>
-                    <p className="text-base font-semibold text-slate-100">{formatNumber(currentRegression.rSquared)}</p>
+                    <p className="text-xs uppercase tracking-widest text-indigo-300/70">R²</p>
+                    <p className="text-base font-semibold text-indigo-100">{formatNumber(currentRegression.rSquared)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-slate-500">Correlation</p>
-                    <p className="text-base font-semibold text-slate-100">{formatNumber(currentRegression.correlation)}</p>
+                    <p className="text-xs uppercase tracking-widest text-indigo-300/70">Correlation</p>
+                    <p className="text-base font-semibold text-indigo-100">{formatNumber(currentRegression.correlation)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-slate-500">Samples</p>
-                    <p className="text-base font-semibold text-slate-100">{currentRegression.sampleSize}</p>
+                    <p className="text-xs uppercase tracking-widest text-indigo-300/70">Samples</p>
+                    <p className="text-base font-semibold text-indigo-100">{currentRegression.sampleSize}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-slate-500">Line coverage</p>
-                    <p className="text-base font-semibold text-slate-100">
+                    <p className="text-xs uppercase tracking-widest text-indigo-300/70">Line coverage</p>
+                    <p className="text-base font-semibold text-indigo-100">
                       {formatNumber(regressionLineSpan, 4)}
                     </p>
                   </div>

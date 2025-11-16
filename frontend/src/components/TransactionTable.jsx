@@ -26,11 +26,11 @@ const TransactionTable = ({ transactions, loading }) => {
   };
   if (loading) {
     return (
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 animate-pulse">
-        <div className="h-6 bg-slate-800 rounded w-52 mb-4"></div>
+      <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 animate-pulse">
+        <div className="h-6 bg-indigo-500/20 rounded w-52 mb-4"></div>
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-14 bg-slate-900 rounded-xl"></div>
+            <div key={index} className="h-14 bg-indigo-500/10 rounded-xl"></div>
           ))}
         </div>
       </div>
@@ -39,23 +39,23 @@ const TransactionTable = ({ transactions, loading }) => {
 
   if (!transactions?.length) {
     return (
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
-        <p className="text-sm text-slate-400">No transactions recorded for this wallet yet.</p>
+      <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6">
+        <p className="text-sm text-indigo-200/80">No transactions recorded for this wallet yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl backdrop-blur">
-      <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl backdrop-blur">
+      <div className="px-6 py-4 border-b border-indigo-500/20 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-100">Recent activity</h3>
-          <p className="text-sm text-slate-400">Track swaps, deposits, yield claims, and allocations in one feed.</p>
+          <h3 className="text-lg font-semibold text-indigo-100">Recent activity</h3>
+          <p className="text-sm text-indigo-200/80">Track swaps, deposits, yield claims, and allocations in one feed.</p>
         </div>
         <button
           onClick={handleExport}
           disabled={!transactions || transactions.length === 0}
-          className="text-sm font-medium text-indigo-300 hover:text-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="text-sm font-medium text-indigo-200/80 hover:text-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           <span>📥</span>
           <span>Export CSV</span>
@@ -63,37 +63,37 @@ const TransactionTable = ({ transactions, loading }) => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-800">
-          <thead className="bg-slate-900/80">
+        <table className="min-w-full divide-y divide-indigo-500/20">
+          <thead className="bg-indigo-500/10">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Asset</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Crypto</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">USD</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Counterparty</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">Asset</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">USD</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">Counterparty</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-indigo-200/70 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
-          <tbody className="bg-slate-900/60 divide-y divide-slate-800">
+          <tbody className="bg-indigo-500/5 divide-y divide-indigo-500/20">
             {transactions.map((txn) => (
-              <tr key={txn.id} className="hover:bg-slate-900 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+              <tr key={txn.id} className="hover:bg-indigo-500/10 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-200">
                   {new Date(txn.date).toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-100">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-100">
                   {txn.type}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-200/80">
                   {txn.asset}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-300">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-indigo-200">
                   {typeof txn.amountCrypto === 'number' ? txn.amountCrypto.toLocaleString() : txn.amountCrypto}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-100">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-indigo-100">
                   ${txn.amountUsd.toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-200/80">
                   {txn.counterparty}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

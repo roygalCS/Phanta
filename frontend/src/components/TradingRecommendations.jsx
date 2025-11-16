@@ -41,16 +41,16 @@ const TradingRecommendations = ({ portfolio, riskAnalysis }) => {
 
       {/* Trading Suggestions */}
       {portfolio.holdings && portfolio.holdings.length > 0 && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-slate-200 mb-2">📊 Quick Actions</p>
-          <div className="space-y-2 text-xs text-slate-300">
-            <button className="w-full text-left px-3 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors">
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4">
+          <p className="text-sm font-semibold text-indigo-100 mb-2">📊 Quick Actions</p>
+          <div className="space-y-2 text-xs text-indigo-200">
+            <button className="w-full text-left px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 rounded-lg transition-colors">
               Rebalance portfolio for optimal allocation
             </button>
-            <button className="w-full text-left px-3 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors">
+            <button className="w-full text-left px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 rounded-lg transition-colors">
               Add stablecoins for risk management
             </button>
-            <button className="w-full text-left px-3 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors">
+            <button className="w-full text-left px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 rounded-lg transition-colors">
               Analyze top holding performance
             </button>
           </div>

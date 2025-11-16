@@ -20,7 +20,7 @@ const GeminiSummaryCard = ({ overview }) => {
     })();
 
     const summary = [
-      `Portfolio stands at $${totalUsd.toLocaleString()} with roughly ${cryptoShare.toFixed(1)}% in crypto beta and $${stableUsd.toLocaleString()} parked in stables/liquidity.`,
+      `Portfolio stands at $${totalUsd.toLocaleString()} with roughly ${cryptoShare.toFixed(1)}% in blockchain assets and $${stableUsd.toLocaleString()} parked in stables/liquidity.`,
       `Last allocation change lifted NAV by ${growth?.percentChange ?? 0}% (Δ $${Math.abs(growth?.deltaUsd ?? 0).toLocaleString()}); current runway buffer holds $${(runwayReserveUsd || 0).toLocaleString()}.`
     ];
 
@@ -32,7 +32,7 @@ const GeminiSummaryCard = ({ overview }) => {
       summary.push('No recurring yield captured yet—divert a slice of stables into laddered vaults to build passive runway coverage.');
     }
 
-    summary.push('Call to action: rebalance if crypto share exceeds risk budget; otherwise deploy spare stables into short-duration treasuries to harden runway.');
+    summary.push('Call to action: rebalance if blockchain asset share exceeds risk budget; otherwise deploy spare stables into short-duration treasuries to harden runway.');
 
     return summary;
   }, [overview]);
@@ -41,16 +41,16 @@ const GeminiSummaryCard = ({ overview }) => {
   const statusTone = 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/40';
 
   return (
-    <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 text-left shadow-lg">
+    <section className="rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-6 text-left shadow-lg">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-indigo-200">Gemini overview</p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-100">Portfolio briefing</h3>
+          <h3 className="mt-2 text-lg font-semibold text-indigo-100">Portfolio briefing</h3>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusTone}`}>{statusLabel}</span>
       </div>
 
-      <div className="mt-4 space-y-3 text-sm text-slate-200">
+      <div className="mt-4 space-y-3 text-sm text-indigo-200">
         {derivedSummary.length ? (
           <ul className="space-y-2">
             {derivedSummary.map((line, index) => (
@@ -61,11 +61,11 @@ const GeminiSummaryCard = ({ overview }) => {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-400">Connect your wallet to surface a briefing.</p>
+          <p className="text-sm text-indigo-200/70">Connect your wallet to surface a briefing.</p>
         )}
       </div>
 
-      <span className="mt-4 block text-[11px] uppercase tracking-widest text-slate-500">
+      <span className="mt-4 block text-[11px] uppercase tracking-widest text-indigo-300/60">
         Snapshot as of {overview?.lastUpdated ? new Date(overview.lastUpdated).toLocaleString() : '—'}
       </span>
     </section>

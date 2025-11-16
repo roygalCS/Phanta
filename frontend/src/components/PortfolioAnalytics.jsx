@@ -124,7 +124,7 @@ const PortfolioAnalytics = ({ overview, loading }) => {
       labels: overview.comparison.labels,
       datasets: [
         {
-          label: 'Crypto Holdings (USD)',
+          label: 'Blockchain Holdings (USD)',
           data: overview.comparison.cryptoUsdValue,
           tension: 0.35,
           fill: false,
@@ -147,11 +147,11 @@ const PortfolioAnalytics = ({ overview, loading }) => {
 
   if (loading) {
     return (
-      <div className="bg-slate-900/60 rounded-2xl border border-slate-800 p-6 animate-pulse">
-        <div className="h-6 bg-slate-800 rounded w-48 mb-6"></div>
+      <div className="bg-indigo-500/10 rounded-2xl border border-indigo-500/20 p-6 animate-pulse">
+        <div className="h-6 bg-indigo-500/20 rounded w-48 mb-6"></div>
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="h-64 bg-slate-900 rounded-xl"></div>
-          <div className="h-64 bg-slate-900 rounded-xl"></div>
+          <div className="h-64 bg-indigo-500/10 rounded-xl"></div>
+          <div className="h-64 bg-indigo-500/10 rounded-xl"></div>
         </div>
       </div>
     );
@@ -159,18 +159,18 @@ const PortfolioAnalytics = ({ overview, loading }) => {
 
   if (!overview) {
     return (
-      <div className="bg-slate-900/60 rounded-2xl border border-slate-800 p-6">
-        <p className="text-sm text-slate-400">Connect a wallet to see portfolio analytics.</p>
+      <div className="bg-indigo-500/10 rounded-2xl border border-indigo-500/20 p-6">
+        <p className="text-sm text-indigo-200/80">Connect a wallet to see portfolio analytics.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <section className="bg-slate-900/70 rounded-2xl border border-slate-800 p-6 backdrop-blur">
+      <section className="bg-indigo-500/10 rounded-2xl border border-indigo-500/20 p-6 backdrop-blur">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-100">Performance momentum</h3>
-          <span className="text-xs uppercase tracking-wide text-indigo-300 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/30">
+          <h3 className="text-lg font-semibold text-indigo-100">Performance momentum</h3>
+          <span className="text-xs uppercase tracking-wide text-indigo-200 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-500/40">
             Updated {new Date(overview.lastUpdated).toLocaleDateString()}
           </span>
         </div>
@@ -180,15 +180,15 @@ const PortfolioAnalytics = ({ overview, loading }) => {
       </section>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <section className="bg-slate-900/70 rounded-2xl border border-slate-800 p-6 flex flex-col backdrop-blur">
-          <h3 className="text-lg font-semibold text-slate-100 mb-4">Crypto vs fiat value</h3>
+        <section className="bg-indigo-500/10 rounded-2xl border border-indigo-500/20 p-6 flex flex-col backdrop-blur">
+          <h3 className="text-lg font-semibold text-indigo-100 mb-4">Blockchain vs fiat value</h3>
           <div className="h-64">
             <Line data={comparisonData} options={chartDefaults} />
           </div>
         </section>
 
-        <section className="bg-slate-900/70 rounded-2xl border border-slate-800 p-6 flex flex-col backdrop-blur">
-          <h3 className="text-lg font-semibold text-slate-100 mb-4">Savings allocation</h3>
+        <section className="bg-indigo-500/10 rounded-2xl border border-indigo-500/20 p-6 flex flex-col backdrop-blur">
+          <h3 className="text-lg font-semibold text-indigo-100 mb-4">Savings allocation</h3>
           <div className="h-64 flex items-center justify-center">
             <Doughnut
               data={allocationData}
@@ -197,7 +197,7 @@ const PortfolioAnalytics = ({ overview, loading }) => {
                   legend: {
                     position: 'bottom',
                     labels: {
-                      color: '#A5B4FC',
+                      color: '#C7D2FE',
                       usePointStyle: true,
                       padding: 18
                     }
@@ -206,11 +206,11 @@ const PortfolioAnalytics = ({ overview, loading }) => {
               }}
             />
           </div>
-          <ul className="mt-4 space-y-2 text-sm text-slate-300">
+          <ul className="mt-4 space-y-2 text-sm text-indigo-200">
             {overview.savingsAllocation.map((item) => (
               <li key={item.label} className="flex items-center justify-between">
                 <span>{item.label}</span>
-                <span className="font-medium text-slate-100">{item.percentage}% · ${item.usdValue.toLocaleString()}</span>
+                <span className="font-medium text-indigo-100">{item.percentage}% · ${item.usdValue.toLocaleString()}</span>
               </li>
             ))}
           </ul>

@@ -125,7 +125,7 @@ const Dashboard = ({ initialTab = 'overview' }) => {
 
     if (!isConnected || !account) {
       return (
-        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 text-slate-400">
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-8 text-indigo-200/70">
           Connect a wallet to populate your dashboard.
         </div>
       );
@@ -133,13 +133,13 @@ const Dashboard = ({ initialTab = 'overview' }) => {
 
     if (!overview && !loadingOverview) {
       return (
-        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 text-center">
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-8 text-center">
           <div className="text-5xl mb-4">📊</div>
-          <h3 className="text-lg font-semibold text-slate-200 mb-2">No Portfolio Data</h3>
-          <p className="text-sm text-slate-400 mb-4">
+          <h3 className="text-lg font-semibold text-indigo-100 mb-2">No Portfolio Data</h3>
+          <p className="text-sm text-indigo-200/80 mb-4">
             {error || 'Unable to load portfolio data. This could be because:'}
           </p>
-          <ul className="text-xs text-slate-500 text-left max-w-md mx-auto space-y-1 mb-4">
+          <ul className="text-xs text-indigo-300/70 text-left max-w-md mx-auto space-y-1 mb-4">
             <li>• Your wallet has no tokens or SOL</li>
             <li>• RPC endpoints are temporarily unavailable</li>
             <li>• Network connectivity issues</li>
@@ -163,7 +163,7 @@ const Dashboard = ({ initialTab = 'overview' }) => {
               };
               loadOverview();
             }}
-            className="px-6 py-2.5 bg-[#1a73e8] text-white rounded-xl text-sm hover:bg-[#1557b0] transition-colors"
+                className="px-6 py-2.5 bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 rounded-xl text-sm hover:bg-indigo-500/40 hover:border-indigo-500/60 transition-colors"
           >
             Retry Loading
           </button>
@@ -226,7 +226,7 @@ const Dashboard = ({ initialTab = 'overview' }) => {
             <div className="grid gap-3 text-sm text-indigo-100/80">
               <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-4">
                 <p className="text-xs uppercase tracking-widest text-indigo-200/80">24h PnL</p>
-                <p className={`text-lg font-semibold ${overview.growth.percentChange >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                <p className={`text-lg font-semibold ${overview.growth.percentChange >= 0 ? 'text-indigo-200' : 'text-indigo-300/70'}`}>
                   {overview.growth.percentChange > 0 ? '+' : ''}
                   <AnimatedNumber value={overview.growth.percentChange || 0} decimals={2} suffix="%" />
                 </p>
@@ -239,8 +239,8 @@ const Dashboard = ({ initialTab = 'overview' }) => {
                 <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-4">
                   <p className="text-xs uppercase tracking-widest text-indigo-200/80">Risk Score</p>
                   <p className={`text-lg font-semibold ${
-                    overview.riskAnalysis.riskScore < 40 ? 'text-emerald-300' : 
-                    overview.riskAnalysis.riskScore < 70 ? 'text-amber-300' : 'text-rose-300'
+                    overview.riskAnalysis.riskScore < 40 ? 'text-indigo-200' : 
+                    overview.riskAnalysis.riskScore < 70 ? 'text-indigo-300' : 'text-indigo-400'
                   }`}>
                     {overview.riskAnalysis.riskScore}/100
                   </p>
@@ -267,9 +267,9 @@ const Dashboard = ({ initialTab = 'overview' }) => {
 
         {/* Real Holdings Display */}
         {overview?.holdings && overview.holdings.length > 0 && (
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6">
+          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-100">Portfolio Holdings</h3>
+              <h3 className="text-lg font-semibold text-indigo-100">Portfolio Holdings</h3>
               <button
                 onClick={() => {
                   const exportData = overview.holdings.map(h => ({
@@ -282,7 +282,7 @@ const Dashboard = ({ initialTab = 'overview' }) => {
                   exportToCSV(exportData, 'phanta-holdings');
                   success('Holdings exported!');
                 }}
-                className="text-xs text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1"
+                className="text-xs text-indigo-200/80 hover:text-indigo-100 transition-colors flex items-center gap-1"
               >
                 <span>📥</span>
                 <span>Export</span>
@@ -299,7 +299,7 @@ const Dashboard = ({ initialTab = 'overview' }) => {
               ))}
             </div>
             {overview.holdings.length > 10 && (
-              <p className="text-xs text-gray-400 mt-4 text-center">
+              <p className="text-xs text-indigo-300/70 mt-4 text-center">
                 Showing top 10 of {overview.holdings.length} holdings
               </p>
             )}
@@ -322,61 +322,61 @@ const Dashboard = ({ initialTab = 'overview' }) => {
   };
 
   const renderIncomeStreams = () => (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-100">Yield sources</h3>
-          <p className="text-sm text-slate-400">Real yield data from your on-chain positions.</p>
-        </div>
-        {incomeStreams.length > 0 && (
-          <span className="px-3 py-1 text-xs rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">
-            ${incomeStreams.reduce((acc, stream) => acc + stream.usdPerMonth, 0).toLocaleString()} / mo
-          </span>
-        )}
-      </div>
-      <div className="space-y-4">
-        {incomeStreams.length > 0 ? (
-          incomeStreams.map((stream) => (
-            <div key={stream.label} className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-3">
+    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-8 space-y-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-100">{stream.label}</p>
-                <p className="text-xs text-slate-400">APR {stream.apr}%</p>
+                <h3 className="text-lg font-semibold text-indigo-100">Yield sources</h3>
+                <p className="text-sm text-indigo-200/80">Real yield data from your on-chain positions.</p>
               </div>
-              <span className="text-sm font-semibold text-emerald-300">${stream.usdPerMonth.toLocaleString()} / mo</span>
+              {incomeStreams.length > 0 && (
+                <span className="px-3 py-1 text-xs rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-200">
+                  ${incomeStreams.reduce((acc, stream) => acc + stream.usdPerMonth, 0).toLocaleString()} / mo
+                </span>
+              )}
             </div>
-          ))
-        ) : (
-          <p className="text-sm text-slate-500">No active yield sources detected from your on-chain positions.</p>
-        )}
-      </div>
-    </div>
+            <div className="space-y-4">
+              {incomeStreams.length > 0 ? (
+                incomeStreams.map((stream) => (
+                  <div key={stream.label} className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-indigo-100">{stream.label}</p>
+                      <p className="text-xs text-indigo-200/70">APR {stream.apr}%</p>
+                    </div>
+                    <span className="text-sm font-semibold text-indigo-200">${stream.usdPerMonth.toLocaleString()} / mo</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-indigo-300/70">No active yield sources detected from your on-chain positions.</p>
+              )}
+            </div>
+          </div>
   );
 
   const renderWalletFingerprint = () => (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8">
-      <h3 className="text-lg font-semibold text-slate-100">Wallet fingerprint</h3>
-      <ul className="mt-6 space-y-3 text-sm text-slate-400">
+    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-8">
+      <h3 className="text-lg font-semibold text-indigo-100">Wallet fingerprint</h3>
+      <ul className="mt-6 space-y-3 text-sm text-indigo-200/80">
         <li className="flex items-center justify-between">
           <span>Wallet address</span>
-          <span className="font-medium text-slate-100">{account ? `${account.slice(0, 6)}…${account.slice(-4)}` : '—'}</span>
+          <span className="font-medium text-indigo-100">{account ? `${account.slice(0, 6)}…${account.slice(-4)}` : '—'}</span>
         </li>
         <li className="flex items-center justify-between">
           <span>Phantom balance</span>
-          <span className="font-medium text-slate-100">{balance} SOL</span>
+          <span className="font-medium text-indigo-100">{balance} SOL</span>
         </li>
         {pricePerEth && (
           <li className="flex items-center justify-between">
             <span>Implied SOL spot</span>
-            <span className="font-medium text-slate-100">${pricePerEth.toFixed(2)} / SOL</span>
-          </li>
+          <span className="font-medium text-indigo-100">${pricePerEth.toFixed(2)} / SOL</span>
+        </li>
         )}
         <li className="flex items-center justify-between">
           <span>Risk profile</span>
-          <span className="capitalize font-medium text-slate-100">{overview?.riskProfile || 'moderate'}</span>
+          <span className="capitalize font-medium text-indigo-100">{overview?.riskProfile || 'moderate'}</span>
         </li>
         <li className="flex items-center justify-between">
           <span>Last portfolio sync</span>
-          <span className="font-medium text-slate-100">
+          <span className="font-medium text-indigo-100">
             {overview?.lastUpdated ? new Date(overview.lastUpdated).toLocaleString() : '—'}
           </span>
         </li>
@@ -385,19 +385,19 @@ const Dashboard = ({ initialTab = 'overview' }) => {
   );
 
   const renderPortfolioSplit = () => (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 space-y-6">
-      <h3 className="text-lg font-semibold text-slate-100">Capital allocation</h3>
-      <p className="text-sm text-slate-400">How your balance is apportioned across strategies.</p>
+    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-8 space-y-6">
+      <h3 className="text-lg font-semibold text-indigo-100">Capital allocation</h3>
+      <p className="text-sm text-indigo-200/80">How your balance is apportioned across strategies.</p>
       <div className="space-y-4">
         {overview?.savingsAllocation?.map((item) => (
           <div key={item.label} className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-300">{item.label}</span>
-              <span className="text-slate-100 font-medium">{item.percentage}% · ${item.usdValue.toLocaleString()}</span>
+              <span className="text-indigo-200">{item.label}</span>
+              <span className="text-indigo-100 font-medium">{item.percentage}% · ${item.usdValue.toLocaleString()}</span>
             </div>
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div className="h-2 rounded-full bg-indigo-500/20 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-sky-500 to-cyan-400"
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-indigo-300"
                 style={{ width: `${item.percentage}%` }}
               />
             </div>
@@ -409,58 +409,58 @@ const Dashboard = ({ initialTab = 'overview' }) => {
 
   const renderFunds = () => (
     <div className="space-y-6">
-      <form onSubmit={addFund} className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 space-y-4">
-        <div>
-          <label htmlFor="fund-name" className="block text-sm font-semibold text-slate-200 mb-2">
-            Create a new fund
-          </label>
-          <input
-            id="fund-name"
-            type="text"
-            value={newFund.name}
-            onChange={(event) => setNewFund((prev) => ({ ...prev, name: event.target.value }))}
-            placeholder="e.g. Momentum Plays"
-            className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
-          />
-        </div>
-        <div>
-          <label htmlFor="fund-thesis" className="block text-sm font-semibold text-slate-200 mb-2">
-            Thesis / Objective
-          </label>
-          <textarea
-            id="fund-thesis"
-            rows={3}
-            value={newFund.thesis}
-            onChange={(event) => setNewFund((prev) => ({ ...prev, thesis: event.target.value }))}
-            placeholder="Outline the allocation strategy Phanta should track."
-            className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
-          />
-        </div>
-        {fundError && <p className="text-xs text-rose-300">{fundError}</p>}
-        <button
-          type="submit"
-          className="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-400 transition-colors"
-        >
-          Add fund
-        </button>
-      </form>
+      <form onSubmit={addFund} className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-6 space-y-4">
+              <div>
+                <label htmlFor="fund-name" className="block text-sm font-semibold text-indigo-100 mb-2">
+                  Create a new fund
+                </label>
+                <input
+                  id="fund-name"
+                  type="text"
+                  value={newFund.name}
+                  onChange={(event) => setNewFund((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="e.g. Momentum Plays"
+                  className="w-full rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-100 placeholder-indigo-300/50 focus:border-indigo-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+                />
+              </div>
+              <div>
+                <label htmlFor="fund-thesis" className="block text-sm font-semibold text-indigo-100 mb-2">
+                  Thesis / Objective
+                </label>
+                <textarea
+                  id="fund-thesis"
+                  rows={3}
+                  value={newFund.thesis}
+                  onChange={(event) => setNewFund((prev) => ({ ...prev, thesis: event.target.value }))}
+                  placeholder="Outline the allocation strategy Phanta should track."
+                  className="w-full rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-100 placeholder-indigo-300/50 focus:border-indigo-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+                />
+              </div>
+              {fundError && <p className="text-xs text-indigo-300">{fundError}</p>}
+              <button
+                type="submit"
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 text-sm font-medium hover:bg-indigo-500/40 hover:border-indigo-500/60 transition-colors"
+              >
+                Add fund
+              </button>
+            </form>
 
-      <div className="space-y-4">
-        {funds.map((fund) => (
-          <div key={fund.name} className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6">
-            <div className="flex items-center justify-between">
-              <h4 className="text-base font-semibold text-slate-100">{fund.name}</h4>
-              <span className="text-xs uppercase tracking-widest text-indigo-300">Custom fund</span>
+            <div className="space-y-4">
+              {funds.map((fund) => (
+                <div key={fund.name} className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-semibold text-indigo-100">{fund.name}</h4>
+                    <span className="text-xs uppercase tracking-widest text-indigo-300">Custom fund</span>
+                  </div>
+                  <p className="text-sm text-indigo-200/80 mt-2">{fund.thesis}</p>
+                </div>
+              ))}
+              {!funds.length && (
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-6 text-sm text-indigo-300/70">
+                  No funds yet. Create one to start tracking thematic allocations.
+                </div>
+              )}
             </div>
-            <p className="text-sm text-slate-400 mt-2">{fund.thesis}</p>
-          </div>
-        ))}
-        {!funds.length && (
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 text-sm text-slate-400">
-            No funds yet. Create one to start tracking thematic allocations.
-          </div>
-        )}
-      </div>
     </div>
   );
 
@@ -484,12 +484,12 @@ const Dashboard = ({ initialTab = 'overview' }) => {
   };
 
   return (
-    <div className="px-[5vw] py-10 bg-slate-950 min-h-full space-y-6 overflow-y-auto">
-      {error && (
-        <div className="bg-rose-500/10 border border-rose-500/40 rounded-3xl p-4 text-sm text-rose-200">
-          {error}
-        </div>
-      )}
+          <div className="px-[5vw] py-10 bg-black min-h-full space-y-6 overflow-y-auto">
+            {error && (
+              <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-3xl p-4 text-sm text-indigo-200">
+                {error}
+              </div>
+            )}
       {renderTab()}
     </div>
   );
