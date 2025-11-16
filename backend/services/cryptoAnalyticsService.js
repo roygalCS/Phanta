@@ -495,20 +495,13 @@ class CryptoAnalyticsService {
     
     console.log(`[CryptoAnalytics] Fetching insights for ${symbols.length} symbols, range: ${range}, days: ${dateRange.days}`);
 
-    // For demo purposes, always use demo data
-    // Uncomment the code below to use real CoinGecko API
+    // Use real CoinGecko API for live market data
     for (let i = 0; i < symbols.length; i++) {
       const symbol = symbols[i];
       
       try {
-        // Always generate demo data for demo purposes
-        console.log(`[CryptoAnalytics] Generating demo data for ${symbol}`);
-        const historicalData = this.generateDemoHistoricalData(symbol, dateRange.days);
-        const currentData = this.generateDemoCurrentPrice(symbol);
-        
-        /* Uncomment to use real API:
         const coinId = this.getCoinId(symbol);
-        console.log(`[CryptoAnalytics] Fetching data for ${symbol} (${coinId})`);
+        console.log(`[CryptoAnalytics] Fetching real data for ${symbol} (${coinId})`);
         
         // Fetch with retry logic for rate limits
         let historicalData, currentData;
@@ -534,14 +527,18 @@ class CryptoAnalyticsService {
               await new Promise(resolve => setTimeout(resolve, retryDelay));
               retryDelay *= 2; // Exponential backoff
             } else {
-              // If all retries failed, generate demo data instead
-              console.log(`[CryptoAnalytics] All retries failed for ${symbol}, generating demo data`);
+              // If all retries failed, generate demo data as fallback
+              console.log(`[CryptoAnalytics] All retries failed for ${symbol}, falling back to demo data`);
               historicalData = this.generateDemoHistoricalData(symbol, dateRange.days);
               currentData = this.generateDemoCurrentPrice(symbol);
               break;
             }
           }
         }
+        
+        /* Demo data fallback (now only used if API fails):
+        const historicalData = this.generateDemoHistoricalData(symbol, dateRange.days);
+        const currentData = this.generateDemoCurrentPrice(symbol);
         */
 
         if (!historicalData || historicalData.prices.length === 0) {

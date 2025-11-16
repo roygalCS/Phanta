@@ -64,22 +64,51 @@ class HeliusService {
   async getWalletTransactions(walletAddress, limit = 50) {
     try {
       if (this.apiKey) {
+        // Use Helius enhanced API with transaction details
         const response = await axios.get(`${this.baseUrl}/addresses/${walletAddress}/transactions`, {
           params: {
             'api-key': this.apiKey,
-            limit
+            limit,
+            type: 'TRANSFER' // Get transfer transactions with details
           }
         });
-        return response.data;
+        return response.data || [];
       } else {
-        // Fallback: Use Solana RPC
-        const response = await axios.post(this.baseUrl, {
+        // Fallback: Use Solana RPC to get signatures, then fetch details
+        const sigResponse = await axios.post('https://api.mainnet-beta.solana.com', {
           jsonrpc: '2.0',
           id: 1,
           method: 'getSignaturesForAddress',
           params: [walletAddress, { limit }]
         });
-        return response.data.result || [];
+        
+        const signatures = sigResponse.data.result || [];
+        const transactions = [];
+        
+        // Fetch transaction details for each signature
+        for (const sig of signatures.slice(0, 20)) { // Limit to 20 for performance
+          try {
+            const txResponse = await axios.post('https://api.mainnet-beta.solana.com', {
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'getTransaction',
+              params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
+            });
+            
+            if (txResponse.data?.result) {
+              transactions.push({
+                signature: sig.signature,
+                blockTime: sig.blockTime,
+                ...txResponse.data.result
+              });
+            }
+          } catch (err) {
+            // Continue if individual tx fetch fails
+            continue;
+          }
+        }
+        
+        return transactions;
       }
     } catch (error) {
       console.error('Helius transactions error:', error.message);

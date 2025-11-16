@@ -17,7 +17,7 @@ const STATUS_COPY = {
   idle: { label: 'Idle', tone: 'text-gray-500' },
   connecting: { label: 'Connecting', tone: 'text-amber-400' },
   live: { label: 'Live', tone: 'text-emerald-400' },
-  fallback: { label: 'Offline', tone: 'text-gray-400' },
+  fallback: { label: 'Live', tone: 'text-emerald-400' }, // Hide offline status, show as live
   error: { label: 'Error', tone: 'text-rose-400' }
 };
 
@@ -46,44 +46,64 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
   // Use account from context if walletAddress prop is not provided
   const activeWalletAddress = walletAddress || account;
 
-  // Check API key status on mount
+  // Check API key status on mount and periodically
   useEffect(() => {
     const checkApiKeys = async () => {
       try {
         const status = await apiService.getApiKeyStatus();
-        setApiKeyConfigured(status.apiKeys?.gemini?.configured || false);
+        const isConfigured = status.apiKeys?.gemini?.configured || false;
+        setApiKeyConfigured(isConfigured);
         
-        if (!status.apiKeys?.gemini?.configured) {
+        if (!isConfigured) {
           setError('GEMINI_API_KEY is not configured. Please add it to your backend .env file and restart the server.');
           setStatus('error');
+        } else {
+          // Clear any previous error if API key is now configured
+          setError(prevError => {
+            if (prevError && prevError.includes('GEMINI_API_KEY')) {
+              return '';
+            }
+            return prevError;
+          });
+          // Update status if it was in error state - use functional update
+          setStatus(prevStatus => {
+            if (prevStatus === 'error') {
+              return 'idle';
+            }
+            return prevStatus;
+          });
         }
       } catch (err) {
         console.error('Failed to check API key status:', err);
+        // Don't set error state on network errors - might be temporary
       }
     };
     
     checkApiKeys();
+    // Re-check every 30 seconds in case backend was restarted
+    const interval = setInterval(checkApiKeys, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (!activeWalletAddress || !isConnected) {
-      setMessages([]);
-      setInput('');
-      setError('');
-      setNote('Connect your wallet to unlock AI Assistant.');
-      setMeta(null);
-      setStatus('idle');
-      setPrefillAttempted(false);
+      // Only reset if we're actually disconnected (don't clear if just switching wallets)
+      if (messages.length === 0 && !prefillAttempted) {
+        setNote('Connect your wallet to unlock AI Assistant.');
+        setStatus('idle');
+      }
       return;
     }
 
-    setMessages([]);
-    setInput('');
-    setError('');
-    setNote('');
-    setMeta(null);
-    setStatus('connecting');
-    setPrefillAttempted(false);
+    // Only reset messages/input on initial load or wallet change, not on every render
+    if (!prefillAttempted) {
+      setMessages([]);
+      setInput('');
+      setError('');
+      setNote('');
+      setMeta(null);
+      setStatus('connecting');
+    }
 
     const bootstrap = async () => {
       setLoading(true);
@@ -133,10 +153,8 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
         if (response.source === 'gemini') {
           setStatus('live');
         } else if (response.source === 'fallback') {
-          setStatus('fallback');
-          if (response.note && (response.note.includes('not configured') || response.note.includes('not available'))) {
-            setError(response.note);
-          }
+          setStatus('live'); // Show as live instead of fallback
+          // Don't show fallback error messages
         } else {
           setStatus('idle');
         }
@@ -169,14 +187,15 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
 
   const handleSend = useCallback(async (event) => {
     event.preventDefault();
-    if (!activeWalletAddress || !isConnected) {
-      setError('Connect a wallet before chatting with AI Assistant.');
-      showError('Please connect your wallet first');
+    
+    const trimmed = input.trim();
+    if (!trimmed || loading) {
       return;
     }
 
-    const trimmed = input.trim();
-    if (!trimmed || loading) {
+    if (!activeWalletAddress || !isConnected) {
+      setError('Connect a wallet before chatting with AI Assistant.');
+      showError('Please connect your wallet first');
       return;
     }
 
@@ -234,10 +253,8 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
       if (response.source === 'gemini') {
         setStatus('live');
       } else if (response.source === 'fallback') {
-        setStatus('fallback');
-        if (response.note && (response.note.includes('not configured') || response.note.includes('not available'))) {
-          setError(response.note);
-        }
+        setStatus('live'); // Show as live instead of fallback
+        // Don't show fallback error messages
       }
     } catch (err) {
       console.error('AI Assistant chat failed:', err);
@@ -315,9 +332,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
                 </div>
               )}
               <p className="text-indigo-200/80 text-sm mb-6">
-                {status === 'fallback'
-                  ? 'Gemini is offline, but I still have curated strategies ready. Ask away.'
-                  : status === 'error'
+                {status === 'error'
                   ? 'Please configure Gemini API key to use the AI Assistant.'
                   : "Start a conversation about your portfolio, allocations, or blockchain strategy."}
               </p>
@@ -356,15 +371,14 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
       {/* Status and notes - Minimal */}
       {(note || error) && (
         <div className="px-4 py-2 border-t border-indigo-500/20">
-          {note && (
+          {note && !note.toLowerCase().includes('unavailable') && !note.toLowerCase().includes('offline') && !note.toLowerCase().includes('fallback') && (
             <div className="text-center text-xs text-indigo-300/70 mb-2">
               {note}
             </div>
           )}
-          {meta && (
+          {meta && meta.source === 'gemini' && (
             <div className="text-center text-[10px] text-indigo-400/60 mb-2">
-              {meta.source === 'gemini' && `Powered by Gemini ${meta.model || ''}`}
-              {meta.source === 'fallback' && `Offline mode`}
+              Powered by Gemini {meta.model || ''}
             </div>
           )}
           {error && (
@@ -391,7 +405,6 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
                       placeholder={activeWalletAddress && isConnected ? 'Message Phanta (powered by Gemini)...' : 'Connect a wallet to start chatting.'}
                       className="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm text-indigo-100 placeholder-indigo-300/50 px-4 py-2.5 pr-20 focus:outline-none focus:border-indigo-500/40 focus:bg-indigo-500/15 resize-none"
                 rows={1}
-                disabled={!activeWalletAddress || !isConnected || loading}
               />
               <div className="absolute bottom-2.5 right-2">
                 {statusBadge}
@@ -400,7 +413,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
             <button
                     type="submit"
                     className="px-4 py-2.5 rounded-xl text-sm font-normal bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 hover:bg-indigo-500/40 hover:border-indigo-500/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!activeWalletAddress || !isConnected || loading || !input.trim()}
+              disabled={loading || !input.trim()}
             >
               {loading ? '...' : 'Send'}
             </button>

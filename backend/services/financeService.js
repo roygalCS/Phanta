@@ -3,44 +3,219 @@ const { DEFAULT_MODEL: GEMINI_MODEL, generateContent: generateGeminiContent } = 
 const solanaPortfolioService = require('./solanaPortfolioService');
 const heliusService = require('./heliusService');
 
-// Generate demo income streams based on wallet address
-const generateDemoIncomeStreams = (walletAddress, totalValue) => {
-  if (!walletAddress || totalValue === 0) {
-    return [
-      {
-        label: 'Marinade Staking',
-        apr: 6.8,
-        usdPerMonth: 12.5
-      },
-      {
-        label: 'Jito MEV Rewards',
-        apr: 8.2,
-        usdPerMonth: 8.3
-      }
-    ];
+// Calculate performance trend from real transaction history
+const calculatePerformanceTrend = (transactions, currentValue, solPrice, walletAddress = '') => {
+  const now = Date.now();
+  const hours = [6, 12, 18, 24];
+  const labels = hours.map(h => `${h}h`);
+  const usdBalances = [];
+  
+  // If no transactions, show flat line
+  if (!transactions || transactions.length === 0) {
+    return {
+      labels,
+      usdBalances: [currentValue, currentValue, currentValue, currentValue],
+      cryptoHoldings: []
+    };
   }
   
-  const walletHash = walletAddress.slice(0, 8);
-  const seed = parseInt(walletHash.replace(/[^0-9]/g, '') || '1234', 16) % 1000;
-  const baseYield = totalValue * 0.05 / 12; // 5% APR monthly
-  
-  return [
-    {
-      label: 'Marinade Staking',
-      apr: 6.5 + (seed % 20) * 0.1,
-      usdPerMonth: baseYield * 0.4 + (seed % 50)
-    },
-    {
-      label: 'Jito MEV Rewards',
-      apr: 7.8 + (seed % 15) * 0.1,
-      usdPerMonth: baseYield * 0.3 + (seed % 30)
-    },
-    {
-      label: 'Kamino Lending',
-      apr: 4.2 + (seed % 10) * 0.1,
-      usdPerMonth: baseYield * 0.2 + (seed % 20)
+  // Calculate value at each time point based on transaction history
+  for (const hoursAgo of hours) {
+    const targetTime = now - (hoursAgo * 60 * 60 * 1000);
+    
+    // Sum all transactions after target time to estimate past value
+    let solChange = 0;
+    
+    for (const tx of transactions) {
+      const txTime = (tx.blockTime || 0) * 1000;
+      if (txTime >= targetTime && txTime <= now) {
+        // This transaction happened in the time window we're calculating
+        // Parse to get SOL change
+        if (tx.nativeTransfers) {
+          for (const transfer of tx.nativeTransfers) {
+            const amount = transfer.amount / 1000000000; // Convert lamports to SOL
+            if (walletAddress && transfer.toUserAccount === walletAddress) {
+              solChange += amount; // Received SOL
+            } else if (walletAddress && transfer.fromUserAccount === walletAddress) {
+              solChange -= amount; // Sent SOL
+            }
+          }
+        } else if (tx.meta && tx.meta.preBalances && tx.meta.postBalances) {
+          // Fallback: estimate from balance changes
+          const preTotal = tx.meta.preBalances.reduce((a, b) => a + b, 0);
+          const postTotal = tx.meta.postBalances.reduce((a, b) => a + b, 0);
+          const change = (postTotal - preTotal) / 1000000000;
+          if (Math.abs(change) > 0.000001) {
+            solChange += change;
+          }
+        }
+      }
     }
-  ];
+    
+    // Estimate value at that time (current value minus transactions in that window)
+    const estimatedValue = currentValue - (solChange * solPrice);
+    usdBalances.push(Math.max(0, estimatedValue));
+  }
+  
+  return {
+    labels,
+    usdBalances,
+    cryptoHoldings: []
+  };
+};
+
+// Parse transaction to extract real data
+const parseTransaction = (tx, walletAddress) => {
+  const LAMPORTS_PER_SOL = 1000000000;
+  let amountSol = 0;
+  let type = 'Transaction';
+  let asset = 'SOL';
+  let counterparty = 'Unknown';
+  let isIncoming = false;
+  
+  try {
+    // Parse Helius enhanced transaction format
+    if (tx.nativeTransfers) {
+      for (const transfer of tx.nativeTransfers) {
+        if (transfer.toUserAccount === walletAddress) {
+          amountSol += transfer.amount / LAMPORTS_PER_SOL;
+          isIncoming = true;
+          counterparty = transfer.fromUserAccount || 'Unknown';
+        } else if (transfer.fromUserAccount === walletAddress) {
+          amountSol += transfer.amount / LAMPORTS_PER_SOL;
+          isIncoming = false;
+          counterparty = transfer.toUserAccount || 'Unknown';
+        }
+      }
+    }
+    
+    // Parse Solana RPC transaction format
+    if (tx.meta && tx.transaction && tx.transaction.message) {
+      const preBalances = tx.meta.preBalances || [];
+      const postBalances = tx.meta.postBalances || [];
+      const accountKeys = tx.transaction.message.accountKeys || [];
+      
+      // Find wallet index
+      const walletIndex = accountKeys.findIndex(ak => 
+        (typeof ak === 'string' ? ak : ak.pubkey) === walletAddress
+      );
+      
+      if (walletIndex >= 0 && preBalances[walletIndex] !== undefined && postBalances[walletIndex] !== undefined) {
+        const balanceChange = (postBalances[walletIndex] - preBalances[walletIndex]) / LAMPORTS_PER_SOL;
+        if (Math.abs(balanceChange) > 0.000001) {
+          amountSol = Math.abs(balanceChange);
+          isIncoming = balanceChange > 0;
+          
+          // Try to find counterparty
+          for (let i = 0; i < accountKeys.length; i++) {
+            if (i !== walletIndex && postBalances[i] !== undefined && preBalances[i] !== undefined) {
+              const otherChange = (postBalances[i] - preBalances[i]) / LAMPORTS_PER_SOL;
+              if (Math.abs(otherChange) > 0.000001 && Math.abs(otherChange - balanceChange) < 0.0001) {
+                const key = accountKeys[i];
+                counterparty = typeof key === 'string' ? key : key.pubkey;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Detect transaction type from instructions
+    if (tx.transaction?.message?.instructions || tx.instructions) {
+      const instructions = tx.transaction?.message?.instructions || tx.instructions || [];
+      for (const ix of instructions) {
+        const programId = ix.programId || (typeof ix === 'object' && ix.programIdString) || '';
+        const programIdStr = typeof programId === 'string' ? programId : programId.toString();
+        
+        // Detect common program types
+        if (programIdStr.includes('Swap') || programIdStr.includes('Jupiter') || programIdStr.includes('Raydium')) {
+          type = 'Swap';
+        } else if (programIdStr.includes('Stake') || programIdStr.includes('Marinade') || programIdStr.includes('Jito')) {
+          type = 'Staking';
+        } else if (programIdStr.includes('Token') && amountSol === 0) {
+          type = 'Token Transfer';
+          asset = 'Token';
+        }
+      }
+    }
+    
+    // Format counterparty
+    if (counterparty && counterparty !== 'Unknown' && counterparty.length > 8) {
+      counterparty = counterparty.slice(0, 4) + '...' + counterparty.slice(-4);
+    }
+    
+    return {
+      amountSol,
+      type,
+      asset,
+      counterparty,
+      isIncoming
+    };
+  } catch (error) {
+    console.error('Error parsing transaction:', error);
+    return { amountSol: 0, type: 'Transaction', asset: 'SOL', counterparty: 'Unknown', isIncoming: false };
+  }
+};
+
+// Detect real staking positions from on-chain data
+const detectStakingPositions = async (walletAddress, holdings, transactions) => {
+  const incomeStreams = [];
+  
+  // Check for staked SOL (mSOL, stSOL, etc.)
+  const stakingTokens = holdings.filter(h => 
+    h.symbol && (h.symbol.includes('mSOL') || h.symbol.includes('stSOL') || h.symbol.includes('jitoSOL'))
+  );
+  
+  for (const stakingToken of stakingTokens) {
+    let label = 'Liquid Staking';
+    let apr = 6.5; // Default APR for liquid staking
+    
+    if (stakingToken.symbol.includes('mSOL')) {
+      label = 'Marinade Staking';
+      apr = 6.8;
+    } else if (stakingToken.symbol.includes('jitoSOL')) {
+      label = 'Jito MEV Rewards';
+      apr = 8.2;
+    } else if (stakingToken.symbol.includes('stSOL')) {
+      label = 'Lido Staking';
+      apr = 5.5;
+    }
+    
+    // Calculate monthly income
+    const usdPerMonth = (stakingToken.usdValue * apr / 100) / 12;
+    
+    if (usdPerMonth > 0.01) { // Only show if meaningful
+      incomeStreams.push({
+        label,
+        apr,
+        usdPerMonth: Math.round(usdPerMonth * 100) / 100
+      });
+    }
+  }
+  
+  // Check transactions for staking activity
+  if (transactions && transactions.length > 0) {
+    const stakingTxs = transactions.filter(tx => {
+      const parsed = parseTransaction(tx, walletAddress);
+      return parsed.type === 'Staking';
+    });
+    
+    if (stakingTxs.length > 0 && incomeStreams.length === 0) {
+      // User has staking transactions but no staking tokens yet
+      // Estimate based on SOL holdings
+      const solHolding = holdings.find(h => h.symbol === 'SOL');
+      if (solHolding && solHolding.usdValue > 100) {
+        incomeStreams.push({
+          label: 'Staking (Estimated)',
+          apr: 6.5,
+          usdPerMonth: Math.round((solHolding.usdValue * 0.065 / 12) * 100) / 100
+        });
+      }
+    }
+  }
+  
+  return incomeStreams;
 };
 
 const FALLBACK_SUGGESTIONS = [
@@ -93,60 +268,25 @@ const getOverview = async (walletAddress) => {
       );
       const stablecoinsUsd = stablecoins.reduce((sum, h) => sum + h.usdValue, 0);
       
-      // Ensure we have at least SOL in holdings, add demo holdings if needed
+      // Use only real holdings - no fake data
       let holdings = realPortfolio.holdings.length > 0 
         ? realPortfolio.holdings 
-        : [{
+        : (realPortfolio.solBalance > 0 ? [{
             symbol: 'SOL',
             mint: 'So11111111111111111111111111111111111111112',
-            amount: realPortfolio.solBalance || 0,
-            usdValue: (realPortfolio.solBalance || 0) * (topHolding.price || 150),
+            amount: realPortfolio.solBalance,
+            usdValue: realPortfolio.solBalance * (topHolding.price || 150),
             price: topHolding.price || 150
-          }];
+          }] : []);
       
       let totalValue = realPortfolio.totalValue || ((realPortfolio.solBalance || 0) * (topHolding.price || 150));
       
-      // Add demo holdings if portfolio is small or empty
-      if (holdings.length < 3 || totalValue < 100) {
-        const walletHash = walletAddress ? walletAddress.slice(0, 8) : 'demo';
-        const seed = parseInt(walletHash.replace(/[^0-9]/g, '') || '1234', 16) % 1000;
-        
-        const demoHoldings = [
-          {
-            symbol: 'USDC',
-            mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-            amount: 50 + (seed % 30),
-            usdValue: 50 + (seed % 30),
-            price: 1.0
-          },
-          {
-            symbol: 'RAY',
-            mint: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
-            amount: 10 + (seed % 20),
-            usdValue: (10 + (seed % 20)) * (2.5 + (seed % 10) * 0.1),
-            price: 2.5 + (seed % 10) * 0.1
-          },
-          {
-            symbol: 'JUP',
-            mint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
-            amount: 25 + (seed % 15),
-            usdValue: (25 + (seed % 15)) * (0.8 + (seed % 5) * 0.1),
-            price: 0.8 + (seed % 5) * 0.1
-          }
-        ];
-        
-        // Merge demo holdings, avoiding duplicates
-        const existingSymbols = new Set(holdings.map(h => h.symbol));
-        demoHoldings.forEach(demo => {
-          if (!existingSymbols.has(demo.symbol)) {
-            holdings.push(demo);
-            existingSymbols.add(demo.symbol);
-          }
-        });
-        
-        // Recalculate total value
-        totalValue = holdings.reduce((sum, h) => sum + h.usdValue, 0);
-      }
+      // Calculate real performance trends from transaction history
+      const transactions = await heliusService.getWalletTransactions(walletAddress, 100);
+      const performanceTrend = calculatePerformanceTrend(transactions, totalValue, topHolding.price || 150, walletAddress);
+      
+      // Detect real staking positions for income streams
+      const incomeStreams = await detectStakingPositions(walletAddress, holdings, transactions);
       
       return {
         walletAddress,
@@ -170,36 +310,17 @@ const getOverview = async (walletAddress) => {
           lastPurchaseCryptoPriceUsd: topHolding.price || 150
         },
         runwayReserveUsd: stablecoinsUsd,
-        performanceTrend: {
-          labels: ['6h', '12h', '18h', '24h'],
-          usdBalances: [
-            totalValue - (realPortfolio.pnl24h || 0) * 0.75,
-            totalValue - (realPortfolio.pnl24h || 0) * 0.5,
-            totalValue - (realPortfolio.pnl24h || 0) * 0.25,
-            totalValue
-          ],
-          cryptoHoldings: holdings.map(h => h.amount)
-        },
+        performanceTrend: performanceTrend,
         savingsAllocation: holdings.slice(0, 5).map((h) => ({
           label: h.symbol,
           percentage: totalValue > 0 ? (h.usdValue / totalValue) * 100 : 0,
           usdValue: h.usdValue
         })),
-        incomeStreams: generateDemoIncomeStreams(walletAddress, totalValue),
+        incomeStreams: incomeStreams,
         comparison: {
-          labels: ['6h', '12h', '18h', '24h'],
-          cryptoUsdValue: [
-            totalValue - (realPortfolio.pnl24h || 0) * 0.75,
-            totalValue - (realPortfolio.pnl24h || 0) * 0.5,
-            totalValue - (realPortfolio.pnl24h || 0) * 0.25,
-            totalValue
-          ],
-          fiatUsdValue: [
-            totalValue - (realPortfolio.pnl24h || 0) * 0.75,
-            totalValue - (realPortfolio.pnl24h || 0) * 0.5,
-            totalValue - (realPortfolio.pnl24h || 0) * 0.25,
-            totalValue
-          ]
+          labels: performanceTrend.labels,
+          cryptoUsdValue: performanceTrend.usdBalances,
+          fiatUsdValue: performanceTrend.usdBalances
         },
         riskAnalysis,
         holdings: holdings,
@@ -257,84 +378,51 @@ const getOverview = async (walletAddress) => {
 
 const getTransactions = async (walletAddress) => {
   try {
-    // Try to get real transactions
+    // Get real transactions with full details
     const realTransactions = await heliusService.getWalletTransactions(walletAddress, 50);
     
-    if (realTransactions && realTransactions.length > 0) {
-      return realTransactions.slice(0, 20).map((tx, index) => ({
-        id: tx.signature || `tx-${index}`,
-        date: new Date(tx.blockTime * 1000).toISOString(),
-        type: 'Transaction',
-        asset: 'SOL',
-        amountCrypto: 0,
-        amountUsd: 0,
-        status: 'completed',
-        counterparty: 'On-chain',
-        signature: tx.signature
-      }));
+    if (!realTransactions || realTransactions.length === 0) {
+      return [];
     }
+    
+    // Get SOL price for USD conversion
+    const jupiterService = require('./jupiterService');
+    const solMint = 'So11111111111111111111111111111111111111112';
+    const solPrice = await jupiterService.getTokenPrice(solMint) || 150;
+    
+    const parsedTransactions = [];
+    
+    for (const tx of realTransactions.slice(0, 20)) {
+      if (!tx.signature && !tx.blockTime) continue;
+      
+      const parsed = parseTransaction(tx, walletAddress);
+      const amountSol = parsed.amountSol;
+      const amountUsd = amountSol * solPrice;
+      
+      // Skip transactions with no meaningful amount
+      if (amountSol < 0.000001 && parsed.type === 'Transaction') continue;
+      
+      parsedTransactions.push({
+        id: tx.signature || `tx-${Date.now()}-${Math.random()}`,
+        date: new Date((tx.blockTime || Date.now() / 1000) * 1000).toISOString(),
+        type: parsed.type,
+        asset: parsed.asset,
+        amountCrypto: parsed.isIncoming ? amountSol : -amountSol,
+        amountUsd: parsed.isIncoming ? amountUsd : -amountUsd,
+        status: 'completed',
+        counterparty: parsed.counterparty,
+        signature: tx.signature
+      });
+    }
+    
+    // Sort by date (newest first)
+    parsedTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    return parsedTransactions;
   } catch (error) {
     console.error('Real transactions fetch failed:', error.message);
+    return [];
   }
-  
-  // Generate demo transactions based on wallet address for demo purposes
-  const walletHash = walletAddress ? walletAddress.slice(0, 8) : 'demo';
-  const seed = parseInt(walletHash.replace(/[^0-9]/g, '') || '1234', 16) % 1000;
-  
-  const demoTransactions = [
-    {
-      id: `demo-${walletHash}-1`,
-      date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      type: 'Swap',
-      asset: 'SOL → USDC',
-      amountCrypto: (0.5 + (seed % 10) * 0.1).toFixed(4),
-      amountUsd: (75 + (seed % 50)).toFixed(2),
-      status: 'completed',
-      counterparty: 'Jupiter Aggregator'
-    },
-    {
-      id: `demo-${walletHash}-2`,
-      date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      type: 'Deposit',
-      asset: 'SOL',
-      amountCrypto: (1.2 + (seed % 5) * 0.2).toFixed(4),
-      amountUsd: (180 + (seed % 100)).toFixed(2),
-      status: 'completed',
-      counterparty: 'Phantom Wallet'
-    },
-    {
-      id: `demo-${walletHash}-3`,
-      date: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-      type: 'Staking',
-      asset: 'SOL',
-      amountCrypto: (2.5 + (seed % 3) * 0.5).toFixed(4),
-      amountUsd: (375 + (seed % 150)).toFixed(2),
-      status: 'completed',
-      counterparty: 'Marinade Finance'
-    },
-    {
-      id: `demo-${walletHash}-4`,
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      type: 'Swap',
-      asset: 'USDC → RAY',
-      amountCrypto: (50 + (seed % 20)).toFixed(2),
-      amountUsd: (50 + (seed % 20)).toFixed(2),
-      status: 'completed',
-      counterparty: 'Raydium DEX'
-    },
-    {
-      id: `demo-${walletHash}-5`,
-      date: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
-      type: 'Yield Claim',
-      asset: 'USDC',
-      amountCrypto: (5.2 + (seed % 10) * 0.1).toFixed(2),
-      amountUsd: (5.2 + (seed % 10) * 0.1).toFixed(2),
-      status: 'completed',
-      counterparty: 'Kamino Finance'
-    }
-  ];
-  
-  return demoTransactions;
 };
 
 const formatFallbackMessage = () =>

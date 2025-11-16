@@ -3,6 +3,8 @@ import { useWallet } from '../WalletContext';
 import { createGroup, joinGroup } from '../services/groupService';
 import GroupChat from './GroupChat';
 import apiService from '../services/api';
+import { useToast } from '../hooks/useToast';
+import ToastContainer from './ToastContainer';
 
 const GroupManager = () => {
   const { account, publicKey, connection } = useWallet();
@@ -10,8 +12,11 @@ const GroupManager = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [chatRefreshTrigger, setChatRefreshTrigger] = useState(0);
+  const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
 
   const [createForm, setCreateForm] = useState({
     name: '',
@@ -24,6 +29,12 @@ const GroupManager = () => {
     joinCode: '',
     email: '',
     deposit: '0.1',
+  });
+
+  const [addMemberForm, setAddMemberForm] = useState({
+    memberAddress: '',
+    memberName: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -86,6 +97,65 @@ const GroupManager = () => {
     } catch (err) {
       console.error('Error creating group:', err);
       setError(err.message || 'Failed to create group');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    if (!selectedGroup) return;
+
+    // Validate inputs
+    if (!addMemberForm.memberName.trim()) {
+      setError('Please enter a member name');
+      showError('Please enter a member name');
+      return;
+    }
+
+    if (!addMemberForm.memberAddress.trim()) {
+      setError('Please enter a wallet address');
+      showError('Please enter a wallet address');
+      return;
+    }
+
+    // Basic Solana address validation (44 characters, base58)
+    const solanaAddressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    if (!solanaAddressRegex.test(addMemberForm.memberAddress.trim())) {
+      setError('Please enter a valid Solana wallet address');
+      showError('Please enter a valid Solana wallet address (32-44 characters)');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const memberName = addMemberForm.memberName.trim();
+      const memberAddress = addMemberForm.memberAddress.trim();
+      await apiService.addGroupMember(selectedGroup.groupAddress, {
+        memberAddress: memberAddress,
+        memberName: memberName,
+        email: addMemberForm.email?.trim() || null,
+      });
+
+      setShowAddMemberModal(false);
+      setAddMemberForm({ memberAddress: '', memberName: '', email: '' });
+      // Reload groups to refresh member list
+      await loadUserGroups();
+      // Trigger GroupChat to refresh members
+      setChatRefreshTrigger(prev => prev + 1);
+      showSuccess(`Added ${memberName} to the group!`);
+    } catch (err) {
+      console.error('Error adding member:', err);
+      let errorMsg = 'Failed to add member';
+      if (err.message) {
+        errorMsg = err.message;
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      }
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -166,6 +236,7 @@ const GroupManager = () => {
   if (selectedGroup) {
     return (
       <div className="h-full flex flex-col">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
         <div className="px-4 py-3 border-b border-[#1f1f1f] flex items-center justify-between">
           <button
             onClick={() => setSelectedGroup(null)}
@@ -190,15 +261,30 @@ const GroupManager = () => {
               </div>
             )}
           </div>
-          <div />
+          <button
+            onClick={() => {
+              setError('');
+              setShowAddMemberModal(true);
+            }}
+            className="px-3 py-1.5 bg-indigo-500/30 border border-indigo-500/40 text-indigo-100 rounded-lg text-xs hover:bg-indigo-500/40 transition-colors"
+            title="Add a member to this group (they don't need to join - just add their wallet address and name)"
+          >
+            + Add Member
+          </button>
         </div>
-        <GroupChat groupId={selectedGroup.id} groupName={selectedGroup.name} />
+        <GroupChat 
+          groupId={selectedGroup.id} 
+          groupName={selectedGroup.name} 
+          groupAddress={selectedGroup.groupAddress}
+          refreshTrigger={chatRefreshTrigger}
+        />
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col bg-black overflow-y-auto">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="px-6 py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -416,6 +502,76 @@ const GroupManager = () => {
                   className="flex-1 px-4 py-2 bg-[#1a73e8] text-white rounded-lg text-sm hover:bg-[#1557b0] disabled:opacity-50"
                 >
                   {loading ? 'Joining...' : 'Join & Deposit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Member Modal */}
+      {showAddMemberModal && selectedGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-white mb-2">Add Member to {selectedGroup.name}</h3>
+            <p className="text-xs text-gray-400 mb-4">Add members by wallet address so Gemini can identify them and compare portfolios when you ask questions like "who's richest?"</p>
+            {error && (
+              <div className="mb-4 bg-rose-500/10 border border-rose-500/40 rounded-lg p-3 text-sm text-rose-200">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleAddMember} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">Member Name</label>
+                <input
+                  type="text"
+                  value={addMemberForm.memberName}
+                  onChange={(e) => setAddMemberForm({ ...addMemberForm, memberName: e.target.value })}
+                  className="w-full bg-black border border-[#1f1f1f] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#2a2a2a]"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">Wallet Address</label>
+                <input
+                  type="text"
+                  value={addMemberForm.memberAddress}
+                  onChange={(e) => setAddMemberForm({ ...addMemberForm, memberAddress: e.target.value })}
+                  className="w-full bg-black border border-[#1f1f1f] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#2a2a2a] font-mono text-xs"
+                  placeholder="e.g., 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter a valid Solana wallet address (32-44 characters)</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">Email (Optional)</label>
+                <input
+                  type="email"
+                  value={addMemberForm.email}
+                  onChange={(e) => setAddMemberForm({ ...addMemberForm, email: e.target.value })}
+                  className="w-full bg-black border border-[#1f1f1f] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#2a2a2a]"
+                  placeholder="member@example.com"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddMemberModal(false);
+                    setAddMemberForm({ memberAddress: '', memberName: '', email: '' });
+                    setError('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-black border border-[#1f1f1f] text-gray-200 rounded-lg text-sm hover:bg-[#0f0f0f]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-[#1a73e8] text-white rounded-lg text-sm hover:bg-[#1557b0] disabled:opacity-50"
+                >
+                  {loading ? 'Adding...' : 'Add Member'}
                 </button>
               </div>
             </form>

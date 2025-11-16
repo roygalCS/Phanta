@@ -121,6 +121,7 @@ const initDatabase = () => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           group_id INTEGER NOT NULL,
           member_address TEXT NOT NULL,
+          member_name TEXT,
           email TEXT,
           deposit REAL NOT NULL DEFAULT 0,
           joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -128,6 +129,13 @@ const initDatabase = () => {
           UNIQUE(group_id, member_address)
         )
       `);
+      
+      // Add member_name column to existing group_members table if it doesn't exist
+      db.run(`ALTER TABLE group_members ADD COLUMN member_name TEXT`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding member_name column:', err);
+        }
+      });
 
       // Database initialized successfully
       console.log('Database initialized successfully');

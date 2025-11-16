@@ -440,6 +440,44 @@ class ApiService {
       throw error;
     }
   }
+
+  async getGroupMembers(groupAddress) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/groups/${groupAddress}/members`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load members');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting group members:', error);
+      throw error;
+    }
+  }
+
+  async addGroupMember(groupAddress, memberData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/groups/${groupAddress}/add-member`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(memberData),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add member');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error adding member:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

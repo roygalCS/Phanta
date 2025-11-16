@@ -41,6 +41,7 @@ export const WalletProvider = ({ children }) => {
 
   const checkExistingConnection = async (solanaConnection) => {
     try {
+      // Check for existing connection
       const wasConnected = localStorage.getItem('walletConnected') === 'true';
       const savedAccount = localStorage.getItem('walletAccount');
       
@@ -50,6 +51,7 @@ export const WalletProvider = ({ children }) => {
           const response = await window.solana.connect({ onlyIfTrusted: true });
           if (response.publicKey.toString() === savedAccount) {
             await establishWalletConnection(response.publicKey, solanaConnection);
+            return; // Successfully reconnected
           } else {
             clearWalletState();
           }
@@ -57,6 +59,8 @@ export const WalletProvider = ({ children }) => {
           // User hasn't authorized or wallet disconnected
           clearWalletState();
         }
+      } else {
+        clearWalletState();
       }
     } catch (error) {
       console.error('Error checking existing connection:', error);

@@ -185,6 +185,7 @@ router.get('/:groupAddress', async (req, res) => {
         ...group,
         members: members.map(m => ({
           address: m.member_address,
+          name: m.member_name || null,
           email: m.email,
           deposit: m.deposit,
           joinedAt: m.joined_at,
@@ -194,6 +195,113 @@ router.get('/:groupAddress', async (req, res) => {
   } catch (error) {
     console.error('Error fetching group:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch group' });
+  }
+});
+
+// Get group members with portfolio data
+router.get('/:groupAddress/members', async (req, res) => {
+  try {
+    const { groupAddress } = req.params;
+    const solanaPortfolioService = require('../services/solanaPortfolioService');
+
+    const group = await runQuerySingle(`
+      SELECT * FROM groups WHERE group_address = ?
+    `, [groupAddress]);
+
+    if (!group) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    const members = await runQuery(`
+      SELECT * FROM group_members WHERE group_id = ? ORDER BY joined_at DESC
+    `, [group.id]);
+
+    // Fetch portfolio data for each member
+    const membersWithPortfolios = await Promise.all(
+      members.map(async (member) => {
+        try {
+          const portfolio = await solanaPortfolioService.getPortfolio(member.member_address);
+          return {
+            address: member.member_address,
+            name: member.member_name || null,
+            email: member.email,
+            deposit: member.deposit,
+            joinedAt: member.joined_at,
+            portfolio: {
+              totalValue: portfolio.totalValue || 0,
+              holdings: portfolio.holdings || [],
+              solBalance: portfolio.solBalance || 0
+            }
+          };
+        } catch (error) {
+          console.error(`Error fetching portfolio for ${member.member_address}:`, error);
+          return {
+            address: member.member_address,
+            name: member.member_name || null,
+            email: member.email,
+            deposit: member.deposit,
+            joinedAt: member.joined_at,
+            portfolio: {
+              totalValue: 0,
+              holdings: [],
+              solBalance: 0
+            }
+          };
+        }
+      })
+    );
+
+    res.json({
+      success: true,
+      members: membersWithPortfolios
+    });
+  } catch (error) {
+    console.error('Error fetching group members:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch members' });
+  }
+});
+
+// Add member to group (manual add with name)
+router.post('/:groupAddress/add-member', async (req, res) => {
+  try {
+    const { groupAddress } = req.params;
+    const { memberAddress, memberName, email } = req.body;
+
+    if (!memberAddress || !memberName) {
+      return res.status(400).json({ success: false, message: 'memberAddress and memberName are required' });
+    }
+
+    const group = await runQuerySingle(`
+      SELECT * FROM groups WHERE group_address = ?
+    `, [groupAddress]);
+
+    if (!group) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Check if already a member
+    const existingMember = await runQuerySingle(`
+      SELECT * FROM group_members 
+      WHERE group_id = ? AND member_address = ?
+    `, [group.id, memberAddress]);
+
+    if (existingMember) {
+      return res.status(400).json({ success: false, message: `This wallet address is already a member of the group${existingMember.member_name ? ` (${existingMember.member_name})` : ''}` });
+    }
+
+    // Add member with name
+    await runQueryExecute(`
+      INSERT INTO group_members (group_id, member_address, member_name, email, deposit, joined_at)
+      VALUES (?, ?, ?, ?, 0, datetime('now'))
+    `, [group.id, memberAddress, memberName, email || null]);
+
+    res.json({
+      success: true,
+      message: 'Member added successfully'
+    });
+  } catch (error) {
+    console.error('Error adding member:', error);
+    res.status(500).json({ success: false, message: 'Failed to add member' });
   }
 });
 

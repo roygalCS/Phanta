@@ -392,8 +392,20 @@ const Friends = () => {
           <p className="text-indigo-300/70">View and manage your blockchain network</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {FRIENDS_LIST.map((friend) => (
+        {FRIENDS_LIST.length === 0 ? (
+          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-12 text-center">
+            <div className="text-5xl mb-4">👥</div>
+            <h3 className="text-xl font-semibold text-indigo-100 mb-2">No Friends Yet</h3>
+            <p className="text-indigo-300/70 mb-4">
+              In production, you'll be able to add friends and compare portfolios.
+            </p>
+            <p className="text-sm text-indigo-400/60">
+              For localhost, friends can be added manually through the Groups feature.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {FRIENDS_LIST.map((friend) => (
             <div
               key={friend.id}
               className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/40 transition-colors"
@@ -460,7 +472,8 @@ const Friends = () => {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
