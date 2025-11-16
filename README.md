@@ -61,24 +61,34 @@ phanta/
 ---
 
 ## Environment Configuration
-Phanta reads environment variables through `backend/config/loadEnv.js`, which layers `backend/.env` over a project-wide `.env` when present. Create `backend/.env` with at least the Gemini API key if you want live AI responses.
+Phanta reads environment variables through `backend/config/loadEnv.js`, which layers `backend/.env` over a project-wide `.env` when present. 
 
+**See `.env.example` for all available environment variables.**
+
+**Backend (`backend/.env`):**
 ```env
-# Required for live Gemini insights
-GEMINI_API_KEY=your_api_key_here
-
-# Optional overrides (defaults shown)
+# Server
 PORT=3001
-GEMINI_API_BASE=https://generativelanguage.googleapis.com
-GEMINI_API_VERSION=v1beta
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_TEMPERATURE=0.25
-GEMINI_MAX_OUTPUT_TOKENS=768
-GEMINI_TOP_P=0.9
-GEMINI_SAFETY_THRESHOLD=BLOCK_MEDIUM_AND_ABOVE
+FRONTEND_URL=http://localhost:5173
+
+# AI Providers (at least one recommended)
+GEMINI_API_KEY=your_key
+CHATGPT_API_KEY=your_key
+CLAUDE_API_KEY=your_key
+GROQ_API_KEY=your_key
+MISTRAL_API_KEY=your_key
+TOGETHER_API_KEY=your_key
+
+# Optional: Enhanced Solana data
+HELIUS_API_KEY=your_key
 ```
 
-> Tip: If you omit `GEMINI_API_KEY`, the finance service automatically falls back to curated suggestion bundles so the UI remains useful offline.
+**Frontend (`frontend/.env`):**
+```env
+VITE_API_BASE_URL=http://localhost:3001/api
+```
+
+> Tip: If you omit all AI API keys, the service automatically falls back to curated suggestions so the UI remains useful offline.
 
 ---
 

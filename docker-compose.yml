@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:5173
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CHATGPT_API_KEY=${CHATGPT_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      - HELIUS_API_KEY=${HELIUS_API_KEY}
+    volumes:
+      - ./backend/phanta.db:/app/phanta.db
+    restart: unless-stopped
+
