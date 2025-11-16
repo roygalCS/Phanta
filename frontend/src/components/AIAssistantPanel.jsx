@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useWallet } from '../WalletContext';
 import apiService from '../services/api';
 import { useToast } from '../hooks/useToast';
+import { getPublicFriends } from '../services/friendsService';
 
 const SUGGESTED_PROMPTS = [
   'Analyze my portfolio and suggest optimizations',
@@ -105,11 +106,21 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
           console.warn('Could not load portfolio for context:', err);
         }
 
+        // Get friends data for AI context
+        const publicFriends = getPublicFriends();
+        const friendsContext = publicFriends.map(f => ({
+          name: f.name,
+          walletAddress: f.walletAddress,
+          portfolioValue: f.portfolio.totalValue,
+          holdings: f.portfolio.tokens.map(t => `${t.symbol}: $${t.usdValue.toFixed(2)}`).join(', ')
+        }));
+
         const response = await apiService.sendAnalystMessage({
           walletAddress: activeWalletAddress,
           history: [],
           prefill: true,
-          overview: portfolioContext
+          overview: portfolioContext,
+          friendsData: friendsContext
         });
 
         if (response.message) {
@@ -187,6 +198,15 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
         console.warn('Could not load portfolio for context:', err);
       }
 
+      // Get friends data for AI context
+      const publicFriends = getPublicFriends();
+      const friendsContext = publicFriends.map(f => ({
+        name: f.name,
+        walletAddress: f.walletAddress,
+        portfolioValue: f.portfolio.totalValue,
+        holdings: f.portfolio.tokens.map(t => `${t.symbol}: $${t.usdValue.toFixed(2)}`).join(', ')
+      }));
+
       // Check if Gemini API key is configured
       if (!apiKeyConfigured) {
         setError('GEMINI_API_KEY is not configured. Please add it to your backend .env file and restart the server.');
@@ -197,6 +217,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
 
       const response = await apiService.sendAnalystMessage({
         walletAddress: activeWalletAddress,
+        friendsData: friendsContext,
         prompt: trimmed,
         history: historyPayload,
         overview: portfolioContext

@@ -4,6 +4,7 @@ import { useWallet } from '../WalletContext';
 import GeminiAnalystPanel from './AIAssistantPanel';
 import MarketIntel from './MarketIntel';
 import GroupManager from './GroupManager';
+import Friends from './Friends';
 import PhantaLogo from './PhantaLogo';
 import ToastContainer from './ToastContainer';
 import Tooltip from './Tooltip';
@@ -22,17 +23,18 @@ const Layout = () => {
   const [overviewBalance, setOverviewBalance] = useState(null);
 
   // Keyboard shortcuts
-  useKeyboardShortcuts({
-    'ctrl+k': () => setActivePage('assistant'),
-    'ctrl+1': () => setActivePage('overview'),
-    'ctrl+2': () => setActivePage('transactions'),
-    'ctrl+3': () => setActivePage('market'),
-    'ctrl+4': () => setActivePage('groups'),
-    'ctrl+/': (e) => {
-      e.preventDefault();
-      setShowHelp(true);
-    }
-  });
+        useKeyboardShortcuts({
+          'ctrl+k': () => setActivePage('assistant'),
+          'ctrl+1': () => setActivePage('overview'),
+          'ctrl+2': () => setActivePage('transactions'),
+          'ctrl+3': () => setActivePage('market'),
+          'ctrl+4': () => setActivePage('groups'),
+          'ctrl+5': () => setActivePage('friends'),
+          'ctrl+/': (e) => {
+            e.preventDefault();
+            setShowHelp(true);
+          }
+        });
 
   useEffect(() => {
     // Remove the info toast on page change - it's annoying
@@ -70,6 +72,7 @@ const Layout = () => {
     () => [
       { id: 'assistant', label: 'AI Assistant', icon: geminiLogo, primary: true },
       { id: 'groups', label: 'Groups' },
+      { id: 'friends', label: 'Friends' },
       { id: 'overview', label: 'Overview' },
       { id: 'transactions', label: 'Transactions' },
       { id: 'income', label: 'Income' },
@@ -99,6 +102,10 @@ const Layout = () => {
 
     if (activePage === 'groups') {
       return <GroupManager />;
+    }
+
+    if (activePage === 'friends') {
+      return <Friends />;
     }
 
     // Default to AI Assistant

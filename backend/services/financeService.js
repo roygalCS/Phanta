@@ -376,12 +376,22 @@ const extractCandidateText = (candidate) => {
     .trim();
 };
 
-const buildSystemInstruction = (overview, walletAddress, extraContext = [], isPrefill = false) => {
+const buildSystemInstruction = (overview, walletAddress, extraContext = [], isPrefill = false, friendsData = []) => {
   const parts = [
     {
       text: `You are Phanta, an expert AI-powered blockchain banking assistant powered by Google Gemini, analyzing wallet ${walletAddress} on Solana. You have access to real on-chain data including token balances, prices, and portfolio composition.`
     }
   ];
+
+  // Add friends data if available
+  if (friendsData && friendsData.length > 0) {
+    const friendsInfo = friendsData.map(f => 
+      `${f.name} (${f.walletAddress.slice(0, 8)}...${f.walletAddress.slice(-8)}): Portfolio value $${f.portfolioValue.toFixed(2)}, Holdings: ${f.holdings}`
+    ).join('\n');
+    parts.push({
+      text: `You also have access to the user's friends' public portfolio data:\n${friendsInfo}\n\nYou can answer questions like "who has the most money" or "compare my portfolio to my friends" by referencing this data.`
+    });
+  }
   
   // For prefill (initial message), keep it very brief
   if (isPrefill) {
@@ -503,9 +513,12 @@ const buildSystemInstructionText = (overview, walletAddress, extraContext = []) 
   return parts.join('\n\n');
 };
 
-const chatWithAssistant = async ({ walletAddress, question, prompt, history = [], overview, prefill = false, contextBlocks = [], groupContext = null }) => {
+const chatWithAssistant = async ({ walletAddress, question, prompt, history = [], overview, prefill = false, contextBlocks = [], groupContext = null, friendsData = [] }) => {
   const portfolio = overview || (await getOverview(walletAddress));
   const userPrompt = (prompt ?? question ?? (prefill ? DEFAULT_PREFILL_PROMPT : '')).trim();
+
+  // Extract friends data from request (fix parameter name)
+  const friendsDataArray = Array.isArray(friendsData) ? friendsData : [];
 
   if (!userPrompt) {
     return {
@@ -533,7 +546,7 @@ const chatWithAssistant = async ({ walletAddress, question, prompt, history = []
       const contents = [...mapHistoryToGemini(history), { role: 'user', parts: [{ text: userPrompt }] }];
       const data = await generateGeminiContent({
         contents,
-        systemInstruction: buildSystemInstruction(portfolio, walletAddress, contextBlocks, prefill),
+        systemInstruction: buildSystemInstruction(portfolio, walletAddress, contextBlocks, prefill, friendsDataArray),
         generationConfig: GEMINI_GENERATION_CONFIG,
         safetySettings: GEMINI_SAFETY_SETTINGS
       });

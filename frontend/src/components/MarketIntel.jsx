@@ -14,6 +14,7 @@ import {
 import { Line, Scatter } from 'react-chartjs-2';
 import apiService from '../services/api';
 import GeminiMarketSummary from './GeminiMarketSummary';
+import { useWallet } from '../WalletContext';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -108,6 +109,7 @@ const correlationBackground = (value) => {
 const correlationText = (value) => (Math.abs(value) > 0.6 ? '#0f172a' : '#e2e8f0');
 
 const MarketIntel = () => {
+  const { account, isConnected } = useWallet();
   const [symbolsInput, setSymbolsInput] = useState('SOL, BTC, ETH');
   const [range, setRange] = useState('6mo');
   const [interval] = useState('1d');
@@ -117,6 +119,8 @@ const MarketIntel = () => {
   const [partialErrors, setPartialErrors] = useState([]);
   const [activeRegressionIndex, setActiveRegressionIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(null);
 
   const fetchMarketIntel = useCallback(async () => {
     const symbols = symbolsInput
@@ -160,9 +164,64 @@ const MarketIntel = () => {
     }
   }, [symbolsInput, range, interval]);
 
+  // Auto-detect tokens from wallet portfolio
   useEffect(() => {
+    const loadWalletTokens = async () => {
+      if (!account || !isConnected) {
+        return;
+      }
+
+      try {
+        const response = await apiService.getPortfolioOverview(account);
+        if (response?.overview?.holdings && response.overview.holdings.length > 0) {
+          // Extract unique symbols from holdings, prioritize SOL and major tokens
+          const symbols = response.overview.holdings
+            .map(h => h.symbol?.toUpperCase())
+            .filter(Boolean)
+            .filter((symbol, index, self) => self.indexOf(symbol) === index); // Unique only
+          
+          // Always include SOL if not present, and add BTC/ETH for context
+          const allSymbols = new Set(symbols);
+          if (!allSymbols.has('SOL')) allSymbols.add('SOL');
+          if (!allSymbols.has('BTC')) allSymbols.add('BTC');
+          if (!allSymbols.has('ETH')) allSymbols.add('ETH');
+          
+          // Limit to top 5 to avoid rate limits
+          const topSymbols = Array.from(allSymbols).slice(0, 5);
+          const symbolsString = topSymbols.join(', ');
+          
+          if (symbolsString && symbolsString !== symbolsInput) {
+            setSymbolsInput(symbolsString);
+            console.log('[MarketIntel] Auto-detected wallet tokens:', symbolsString);
+          }
+        }
+      } catch (error) {
+        console.error('[MarketIntel] Error loading wallet tokens:', error);
+        // Keep default symbols if wallet fetch fails
+      }
+    };
+
+    loadWalletTokens();
+  }, [account, isConnected]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!autoRefreshEnabled || !account || !isConnected) {
+      return;
+    }
+
+    // Initial fetch
     fetchMarketIntel();
-  }, [fetchMarketIntel]);
+    setLastRefresh(new Date());
+
+    // Set up interval for auto-refresh
+    const interval = setInterval(() => {
+      fetchMarketIntel();
+      setLastRefresh(new Date());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [account, isConnected, autoRefreshEnabled, fetchMarketIntel]);
 
   const regressionCount = insights?.analytics?.regressionAnalytics?.length || 0;
 
@@ -400,7 +459,9 @@ const MarketIntel = () => {
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-indigo-100">Blockchain Market Intelligence</h3>
               <p className="text-sm text-indigo-200/80">
-                Pull live blockchain asset pricing, volatility, and distribution stats from CoinGecko to analyze market trends.
+                {account && isConnected 
+                  ? `Auto-tracking your wallet's blockchain assets. Updates every 30 seconds.`
+                  : 'Pull live blockchain asset pricing, volatility, and distribution stats from CoinGecko to analyze market trends.'}
               </p>
             </div>
 
@@ -412,16 +473,15 @@ const MarketIntel = () => {
                     type="text"
                     value={symbolsInput}
                     onChange={(event) => setSymbolsInput(event.target.value)}
-                    placeholder="SOL, BTC, ETH"
+                    placeholder={account && isConnected ? "Auto-detected from wallet..." : "SOL, BTC, ETH"}
                     className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 text-sm text-indigo-100 placeholder-indigo-300/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/40 w-full"
                     disabled={loading}
                   />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-indigo-300/70">
-                    {symbolsInput.split(',').filter(s => s.trim()).length} selected
-                  </span>
                 </div>
                 <p className="text-[10px] text-indigo-300/60 mt-1">
-                  💡 Tip: CoinGecko free tier limits requests. Use 1-2 symbols for faster results.
+                  {account && isConnected 
+                    ? '💡 Auto-detected from your wallet.'
+                    : '💡 Tip: CoinGecko free tier limits requests. Use 1-2 symbols for faster results.'}
                 </p>
               </label>
 
@@ -446,14 +506,27 @@ const MarketIntel = () => {
                 </div>
               </label>
 
-              <button
-                type="button"
-                onClick={fetchMarketIntel}
-                className="bg-indigo-500/30 border border-indigo-500/40 hover:bg-indigo-500/40 hover:border-indigo-500/60 text-indigo-100 px-6 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={loading}
-              >
-                {loading ? 'Fetching…' : 'Refresh'}
-              </button>
+              <div className="flex items-center gap-2">
+                {account && isConnected && (
+                  <label className="flex items-center gap-2 text-xs text-indigo-200/70">
+                    <input
+                      type="checkbox"
+                      checked={autoRefreshEnabled}
+                      onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                      className="rounded border-indigo-500/30 bg-indigo-500/10"
+                    />
+                    <span>Auto-refresh</span>
+                  </label>
+                )}
+                <button
+                  type="button"
+                  onClick={fetchMarketIntel}
+                  className="bg-indigo-500/30 border border-indigo-500/40 hover:bg-indigo-500/40 hover:border-indigo-500/60 text-indigo-100 px-6 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={loading}
+                >
+                  {loading ? 'Fetching…' : 'Refresh'}
+                </button>
+              </div>
             </div>
           </div>
 

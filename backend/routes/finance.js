@@ -115,7 +115,8 @@ router.post('/ai-suggestions', async (req, res) => {
       prefill = false,
       overview,
       context,
-      groupContext = null
+      groupContext = null,
+      friendsData = []
     } = req.body || {};
 
     if (!walletAddress) {
@@ -139,7 +140,8 @@ router.post('/ai-suggestions', async (req, res) => {
       prefill: Boolean(prefill),
       overview,
       contextBlocks,
-      groupContext
+      groupContext,
+      friendsData: Array.isArray(friendsData) ? friendsData : []
     });
 
     res.json({
