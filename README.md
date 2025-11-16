@@ -2,46 +2,46 @@
 
 **AI-Powered Blockchain Portfolio Management Platform**
 
-Phanta is a next-generation **blockchain-native** portfolio management platform that leverages **on-chain blockchain data**, Solana Program Derived Addresses (PDAs), and Google Gemini AI to provide intelligent portfolio analysis, risk assessment, and automated insights. Built entirely on **blockchain infrastructure**, Phanta brings the power of decentralized finance to portfolio management.
+Phanta is a next-generation blockchain-native portfolio management platform that leverages on-chain data, Solana Program Derived Addresses (PDAs), and Google Gemini AI to provide intelligent portfolio analysis, risk assessment, and automated insights. Built entirely on blockchain infrastructure, Phanta brings the power of decentralized finance to portfolio management.
 
 ## 🌐 Blockchain-First Architecture
 
-Phanta is built **entirely on blockchain infrastructure** - every feature leverages the power of decentralized blockchain technology:
+Phanta is built entirely on blockchain infrastructure - every feature leverages the power of decentralized technology:
 
-- **Solana Blockchain**: All portfolio data is fetched directly from **on-chain blockchain sources**
-- **Program Derived Addresses (PDAs)**: Group functionality uses Solana PDAs for **decentralized blockchain state management**
-- **On-Chain Blockchain Data**: Real-time wallet balances, token holdings, and transaction history from the **Solana blockchain**
-- **Smart Contract Integration**: Group deposits and membership tracked **on-chain via blockchain programs**
-- **Decentralized Blockchain State**: Group accounts stored as PDAs on the **blockchain**, ensuring transparency and immutability
+- **Solana Blockchain**: All portfolio data is fetched directly from on-chain sources
+- **Program Derived Addresses (PDAs)**: Group functionality uses Solana PDAs for decentralized state management
+- **On-Chain Data**: Real-time wallet balances, token holdings, and transaction history from the Solana blockchain
+- **Smart Contract Integration**: Group deposits and membership tracked on-chain via Solana programs
+- **Decentralized State**: Group accounts stored as PDAs, ensuring transparency and immutability
 
 ## 🔗 Core Blockchain Features
 
-### On-Chain Blockchain Portfolio Tracking
-- Real-time balance fetching from **Solana blockchain RPC endpoints**
-- Token account analysis using **Solana's blockchain Token Program**
-- Transaction history directly from **blockchain signatures**
-- Multi-RPC endpoint support for **blockchain reliability**
+### On-Chain Portfolio Tracking
+- Real-time balance fetching from Solana RPC endpoints
+- Token account analysis using Solana's Token Program
+- Transaction history directly from blockchain signatures
+- Multi-RPC endpoint support for reliability
 
-### Solana Blockchain Program Integration
-- **Group Management**: Create and join groups with **on-chain blockchain state**
-- **PDA Accounts**: Group data stored in **Program Derived Addresses on the blockchain**
-- **Deposit Tracking**: Member deposits tracked **on-chain via blockchain**
-- **Majority Voting**: **On-chain blockchain logic** for group decisions
+### Solana Program Integration
+- **Group Management**: Create and join groups with on-chain state
+- **PDA Accounts**: Group data stored in Program Derived Addresses
+- **Deposit Tracking**: Member deposits tracked on-chain
+- **Majority Voting**: On-chain logic for group decisions
 
 ### Blockchain Data Sources
-- **Helius API**: Enhanced **Solana blockchain** wallet indexing
-- **Jupiter API**: Real-time token prices from **on-chain blockchain DEX aggregators**
-- **Solana RPC**: Direct **blockchain queries** for balances and transactions
-- **CoinGecko**: Market data for **blockchain assets**
+- **Helius API**: Enhanced Solana wallet indexing
+- **Jupiter API**: Real-time token prices from on-chain DEX aggregators
+- **Solana RPC**: Direct blockchain queries for balances and transactions
+- **CoinGecko**: Market data for cryptocurrency assets
 
-## 🤖 AI-Powered Blockchain Insights
+## 🤖 AI-Powered Insights
 
-Powered by Google Gemini, Phanta provides **blockchain-native** intelligence:
+Powered by Google Gemini, Phanta provides:
 
-- **Blockchain Portfolio Analysis**: AI-driven analysis of your **on-chain blockchain holdings**
-- **Risk Assessment**: Intelligent risk scoring based on **blockchain data**
-- **Trading Recommendations**: Data-driven suggestions for **blockchain portfolio** optimization
-- **Group Chat AI**: Collaborative decision-making with AI assistance via `@gemini` mentions for **blockchain groups**
+- **Portfolio Analysis**: AI-driven analysis of your on-chain holdings
+- **Risk Assessment**: Intelligent risk scoring based on blockchain data
+- **Trading Recommendations**: Data-driven suggestions for portfolio optimization
+- **Group Chat AI**: Collaborative decision-making with AI assistance via `@gemini` mentions
 
 ## 🏗️ Technical Stack
 
@@ -116,35 +116,35 @@ Powered by Google Gemini, Phanta provides **blockchain-native** intelligence:
 
 ## 📊 Features
 
-### Blockchain Portfolio Dashboard
-- **Real-Time Blockchain Balances**: Live SOL and SPL token balances from **the blockchain**
-- **On-Chain Blockchain Holdings**: All tokens tracked directly from your **blockchain wallet**
-- **Blockchain Transaction History**: Complete **on-chain blockchain transaction** feed
-- **24h PnL**: Calculated from **blockchain price data**
+### Portfolio Dashboard
+- **Real-Time Balances**: Live SOL and SPL token balances from blockchain
+- **On-Chain Holdings**: All tokens tracked directly from your wallet
+- **Transaction History**: Complete on-chain transaction feed
+- **24h PnL**: Calculated from blockchain price data
 
-### Group Management (On-Chain Blockchain)
-- **Create Groups**: Initialize **Solana blockchain PDA accounts** for groups
-- **Join Groups**: Deposit SOL/SPL tokens to join **blockchain groups**
-- **On-Chain Blockchain State**: All group data stored in **blockchain accounts**
-- **Majority Logic**: **Blockchain-enforced** group decision rules
+### Group Management (On-Chain)
+- **Create Groups**: Initialize Solana PDA accounts for groups
+- **Join Groups**: Deposit SOL/SPL tokens to join groups
+- **On-Chain State**: All group data stored in blockchain accounts
+- **Majority Logic**: Blockchain-enforced group decision rules
 
 ### AI Assistant
-- **Blockchain Portfolio Analysis**: Gemini AI analyzes your **on-chain blockchain portfolio**
-- **Risk Warnings**: AI identifies potential risks in **blockchain holdings**
-- **Optimization Suggestions**: Data-driven recommendations for **blockchain assets**
-- **Group Chat**: AI-powered **blockchain group** discussions
+- **Portfolio Analysis**: Gemini AI analyzes your on-chain portfolio
+- **Risk Warnings**: AI identifies potential risks in holdings
+- **Optimization Suggestions**: Data-driven recommendations
+- **Group Chat**: AI-powered group discussions
 
 ### Market Intelligence
-- **Blockchain Analytics**: Market data and volatility analysis
+- **Crypto Analytics**: Market data and volatility analysis
 - **Correlation Matrices**: Asset correlation from blockchain data
 - **Regression Analysis**: Statistical analysis of price movements
 
-## 🔐 Blockchain Security
+## 🔐 Security
 
-- **Blockchain Wallet Integration**: Direct connection to Phantom **blockchain wallet**
-- **No Private Keys**: Private keys never leave your **blockchain wallet**
-- **On-Chain Blockchain Verification**: All transactions verified on **Solana blockchain**
-- **Transparent Blockchain State**: Group data publicly verifiable **on-chain via blockchain**
+- **Wallet Integration**: Direct connection to Phantom wallet
+- **No Private Keys**: Private keys never leave your wallet
+- **On-Chain Verification**: All transactions verified on Solana blockchain
+- **Transparent State**: Group data publicly verifiable on-chain
 
 ## 🛠️ Development
 
@@ -183,19 +183,19 @@ pub struct GroupAccount {
 
 ### Blockchain Data Flow
 
-1. **Blockchain Wallet Connection**: Phantom wallet connects via **Solana blockchain Web3.js**
-2. **Blockchain RPC Queries**: Fetch balances, tokens, transactions from **Solana blockchain RPC**
-3. **On-Chain Blockchain State**: Read group PDAs from **the blockchain**
-4. **AI Blockchain Analysis**: Gemini analyzes **on-chain blockchain portfolio data**
-5. **User Interface**: Display **blockchain data** in modern UI
+1. **Wallet Connection**: Phantom wallet connects via Solana Web3.js
+2. **RPC Queries**: Fetch balances, tokens, transactions from Solana RPC
+3. **On-Chain State**: Read group PDAs from blockchain
+4. **AI Analysis**: Gemini analyzes on-chain portfolio data
+5. **User Interface**: Display blockchain data in modern UI
 
 ## 🌟 Key Differentiators
 
-- **100% Blockchain-Native**: All data sourced from **on-chain blockchain sources**
-- **Solana Blockchain-First**: Built specifically for **Solana blockchain**
-- **PDA-Based Blockchain Groups**: **Decentralized blockchain group** management
-- **Real-Time On-Chain Blockchain Data**: Live **blockchain state updates**
-- **AI + Blockchain**: Combines AI intelligence with **blockchain transparency**
+- **100% Blockchain-Native**: All data sourced from on-chain sources
+- **Solana-First**: Built specifically for Solana blockchain
+- **PDA-Based Groups**: Decentralized group management
+- **Real-Time On-Chain Data**: Live blockchain state updates
+- **AI + Blockchain**: Combines AI intelligence with blockchain transparency
 
 ## 📝 License
 
