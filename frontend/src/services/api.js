@@ -112,6 +112,23 @@ class ApiService {
     }
   }
 
+  // Check API key status
+  async getApiKeyStatus() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health/api-keys`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check API key status');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error checking API key status:', error);
+      throw error;
+    }
+  }
+
   // Orders API methods
   async getOrders(userAddress, status = null) {
     try {
@@ -250,7 +267,7 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error contacting AI:', error);
+      console.error('Error contacting Gemini:', error);
       throw error;
     }
   }
@@ -273,7 +290,30 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('Error contacting AI for group chat:', error);
+      console.error('Error contacting Gemini for group chat:', error);
+      throw error;
+    }
+  }
+
+  async getCryptoMetrics(payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/finance/crypto/metrics`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch crypto metrics');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching crypto metrics:', error);
       throw error;
     }
   }
@@ -369,12 +409,16 @@ class ApiService {
       });
 
       const data = await response.json();
-
+      
       if (!response.ok) {
         throw new Error(data.message || 'Failed to join group');
       }
 
-      return data;
+      // Return data with resolved group address if join code was used
+      return {
+        ...data,
+        groupAddress: data.groupAddress || data.group?.group_address,
+      };
     } catch (error) {
       console.error('Error joining group:', error);
       throw error;

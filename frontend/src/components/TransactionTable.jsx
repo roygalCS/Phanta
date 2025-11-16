@@ -1,4 +1,6 @@
 import React from 'react';
+import { exportToCSV } from '../utils/export';
+import { useToast } from '../hooks/useToast';
 
 const statusBadge = {
   completed: 'text-emerald-200 bg-emerald-500/10 border border-emerald-500/40',
@@ -7,6 +9,21 @@ const statusBadge = {
 };
 
 const TransactionTable = ({ transactions, loading }) => {
+  const { success, error } = useToast();
+
+  const handleExport = () => {
+    if (!transactions || transactions.length === 0) {
+      error('No transactions to export');
+      return;
+    }
+    
+    try {
+      exportToCSV(transactions, 'phanta-transactions');
+      success('Transactions exported to CSV!');
+    } catch (err) {
+      error('Failed to export transactions');
+    }
+  };
   if (loading) {
     return (
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 animate-pulse">
@@ -35,8 +52,13 @@ const TransactionTable = ({ transactions, loading }) => {
           <h3 className="text-lg font-semibold text-slate-100">Recent activity</h3>
           <p className="text-sm text-slate-400">Track swaps, deposits, yield claims, and allocations in one feed.</p>
         </div>
-        <button className="text-sm font-medium text-indigo-300 hover:text-indigo-200">
-          Export CSV
+        <button
+          onClick={handleExport}
+          disabled={!transactions || transactions.length === 0}
+          className="text-sm font-medium text-indigo-300 hover:text-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          <span>📥</span>
+          <span>Export CSV</span>
         </button>
       </div>
 

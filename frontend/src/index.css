@@ -1,42 +1,81 @@
 @import "tailwindcss";
+
 /* Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
+}
+
+/* Firefox */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* IE and Edge */
+.no-scrollbar {
+  -ms-overflow-style: none;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
   }
-
-  /* Firefox */
-  .no-scrollbar {
-    scrollbar-width: none;
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
+}
 
-  /* IE and Edge */
-  .no-scrollbar {
-    -ms-overflow-style: none;
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
-
-  .innershadow{
-    /* Rectangle 3 */
-
-
-background: #F3F3F3;
-box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.25);
-
+  to {
+    opacity: 1;
   }
+}
 
-  .fillButton{
-    /* Rectangle 1 */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
 
-box-sizing: border-box;
-
-background: linear-gradient(180deg, #FF5900 0%, #C04807 100%);
-border: 5px solid #FFFFFF;
-box-shadow: 0px 0px 9px 1px rgba(0, 0, 0, 0.69);
-border-radius: 100px;
-
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
   }
-  .fillButton:hover{
-    background: linear-gradient(180deg, #FF5900 0%, #FF5900 100%);
-    transition: 0.2s;
-    box-shadow: none;
-
+  50% {
+    opacity: 0.5;
   }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f0f0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f1f1f;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a2a;
+}

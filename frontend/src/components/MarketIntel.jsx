@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import SearchBar from './SearchBar';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -107,7 +108,7 @@ const correlationBackground = (value) => {
 const correlationText = (value) => (Math.abs(value) > 0.6 ? '#0f172a' : '#e2e8f0');
 
 const MarketIntel = () => {
-  const [symbolsInput, setSymbolsInput] = useState('NVDA, MSFT, META');
+  const [symbolsInput, setSymbolsInput] = useState('SOL, BTC, ETH');
   const [range, setRange] = useState('6mo');
   const [interval] = useState('1d');
   const [loading, setLoading] = useState(false);
@@ -115,15 +116,16 @@ const MarketIntel = () => {
   const [insights, setInsights] = useState(null);
   const [partialErrors, setPartialErrors] = useState([]);
   const [activeRegressionIndex, setActiveRegressionIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchMarketIntel = async () => {
+  const fetchMarketIntel = useCallback(async () => {
     const symbols = symbolsInput
       .split(',')
       .map((symbol) => symbol.trim().toUpperCase())
       .filter(Boolean);
 
     if (!symbols.length) {
-      setError('Add at least one ticker to analyse.');
+      setError('Add at least one cryptocurrency to analyse.');
       setInsights(null);
       return;
     }
@@ -133,22 +135,21 @@ const MarketIntel = () => {
     setPartialErrors([]);
 
     try {
-      const response = await apiService.getStockMetrics({ symbols, range, interval });
+      const response = await apiService.getCryptoMetrics({ symbols, range, interval });
       setInsights(response);
       setPartialErrors(response.errors || []);
     } catch (err) {
       setInsights(null);
       setPartialErrors([]);
-      setError(err.message || 'Unable to load market intelligence right now.');
+      setError(err.message || 'Unable to load crypto market intelligence right now.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [symbolsInput, range, interval]);
 
   useEffect(() => {
     fetchMarketIntel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchMarketIntel]);
 
   const regressionCount = insights?.analytics?.regressionAnalytics?.length || 0;
 
@@ -384,20 +385,20 @@ const MarketIntel = () => {
         <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-slate-100">Market intelligence</h3>
+              <h3 className="text-xl font-semibold text-slate-100">Crypto Market Intelligence</h3>
               <p className="text-sm text-slate-400">
-                Pull live Yahoo Finance pricing, volatility, and distribution stats to benchmark your targets.
+                Pull live cryptocurrency pricing, volatility, and distribution stats from CoinGecko to analyze market trends.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <label className="flex flex-col gap-1 text-xs uppercase tracking-widest text-slate-400">
-                Tickers
+                Cryptocurrencies
                 <input
                   type="text"
                   value={symbolsInput}
                   onChange={(event) => setSymbolsInput(event.target.value)}
-                  placeholder="AAPL, MSFT, NVDA"
+                  placeholder="SOL, BTC, ETH"
                   className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
                   disabled={loading}
                 />
@@ -548,7 +549,7 @@ const MarketIntel = () => {
                 <table className="w-full text-sm border-separate" style={{ borderSpacing: '0 6px' }}>
                   <thead>
                     <tr>
-                      <th className="text-left text-xs uppercase tracking-widest text-slate-400 px-2">Ticker</th>
+                      <th className="text-left text-xs uppercase tracking-widest text-slate-400 px-2">Crypto</th>
                       {correlationTable.map(({ symbol }) => (
                         <th key={symbol} className="text-xs uppercase tracking-widest text-slate-400 px-2 text-center">
                           {symbol}

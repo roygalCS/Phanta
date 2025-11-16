@@ -1,45 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useWallet } from '../WalletContext';
 import apiService from '../services/api';
+import { useToast } from '../hooks/useToast';
 
 const SUGGESTED_PROMPTS = [
-  'What allocation tweaks should I make this week?',
-  'How can I hedge downside risk over the next quarter?',
-  'Summarise my runway and highlight any red flags.',
-  'Give me three yield ideas that fit this wallet.'
+  'Analyze my portfolio and suggest optimizations',
+  'What are the biggest risks in my current holdings?',
+  'How can I improve my diversification?',
+  'What yield opportunities exist for my tokens?',
+  'Should I rebalance my portfolio?',
+  'Explain my 24h PnL and what caused it'
 ];
-
-const AI_PROVIDERS = {
-  gemini: { 
-    name: 'Gemini', 
-    color: 'from-purple-500 to-pink-500',
-    logo: '🔮'
-  },
-  chatgpt: { 
-    name: 'ChatGPT', 
-    color: 'from-green-500 to-emerald-500',
-    logo: '🤖'
-  },
-  claude: { 
-    name: 'Claude', 
-    color: 'from-orange-500 to-amber-500',
-    logo: '🧠'
-  },
-  groq: { 
-    name: 'Groq', 
-    color: 'from-blue-500 to-cyan-500',
-    logo: '⚡'
-  },
-  mistral: { 
-    name: 'Mistral', 
-    color: 'from-indigo-500 to-purple-500',
-    logo: '🌊'
-  },
-  together: { 
-    name: 'Together', 
-    color: 'from-teal-500 to-green-500',
-    logo: '🤝'
-  },
-};
 
 const STATUS_COPY = {
   idle: { label: 'Idle', tone: 'text-gray-500' },
@@ -57,20 +28,44 @@ const createMessage = (role, content, extras = {}) => ({
 });
 
 const GeminiAnalystPanel = ({ walletAddress }) => {
+  const { isConnected, account } = useWallet();
+  const { success, error: showError } = useToast();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(walletAddress ? 'connecting' : 'idle');
+  const [status, setStatus] = useState((walletAddress || account) ? 'connecting' : 'idle');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [meta, setMeta] = useState(null);
   const [prefillAttempted, setPrefillAttempted] = useState(false);
-  const [aiProvider, setAiProvider] = useState('gemini');
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
+  
+  // Use account from context if walletAddress prop is not provided
+  const activeWalletAddress = walletAddress || account;
+
+  // Check API key status on mount
+  useEffect(() => {
+    const checkApiKeys = async () => {
+      try {
+        const status = await apiService.getApiKeyStatus();
+        setApiKeyConfigured(status.apiKeys?.gemini?.configured || false);
+        
+        if (!status.apiKeys?.gemini?.configured) {
+          setError('GEMINI_API_KEY is not configured. Please add it to your backend .env file and restart the server.');
+          setStatus('error');
+        }
+      } catch (err) {
+        console.error('Failed to check API key status:', err);
+      }
+    };
+    
+    checkApiKeys();
+  }, []);
 
   useEffect(() => {
-    if (!walletAddress) {
+    if (!activeWalletAddress || !isConnected) {
       setMessages([]);
       setInput('');
       setError('');
@@ -92,24 +87,33 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
     const bootstrap = async () => {
       setLoading(true);
       try {
+        // Check if Gemini API key is configured
+        if (!apiKeyConfigured) {
+          setError('GEMINI_API_KEY is not configured. Please add it to your backend .env file and restart the server.');
+          setStatus('error');
+          setLoading(false);
+          setPrefillAttempted(true);
+          return;
+        }
+
         // Get real portfolio data for context
         let portfolioContext = null;
         try {
-          const portfolioResponse = await apiService.getPortfolioOverview(walletAddress);
+          const portfolioResponse = await apiService.getPortfolioOverview(activeWalletAddress);
           portfolioContext = portfolioResponse.overview;
         } catch (err) {
           console.warn('Could not load portfolio for context:', err);
         }
 
         const response = await apiService.sendAnalystMessage({
-          walletAddress,
+          walletAddress: activeWalletAddress,
           history: [],
           prefill: true,
           overview: portfolioContext
         });
 
         if (response.message) {
-          setMessages([createMessage('assistant', response.message, { source: response.source })]);
+          setMessages([createMessage('assistant', response.message, { source: 'gemini' })]);
         }
 
         setNote(response.note || '');
@@ -119,6 +123,9 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
           setStatus('live');
         } else if (response.source === 'fallback') {
           setStatus('fallback');
+          if (response.note && (response.note.includes('not configured') || response.note.includes('not available'))) {
+            setError(response.note);
+          }
         } else {
           setStatus('idle');
         }
@@ -133,7 +140,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
     };
 
     bootstrap();
-  }, [walletAddress]);
+  }, [activeWalletAddress, isConnected, apiKeyConfigured]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -149,10 +156,11 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
     }
   }, [input]);
 
-  const handleSend = async (event) => {
+  const handleSend = useCallback(async (event) => {
     event.preventDefault();
-    if (!walletAddress) {
+    if (!activeWalletAddress || !isConnected) {
       setError('Connect a wallet before chatting with AI Assistant.');
+      showError('Please connect your wallet first');
       return;
     }
 
@@ -173,41 +181,53 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
       // Get real portfolio data for context
       let portfolioContext = null;
       try {
-        const portfolioResponse = await apiService.getPortfolioOverview(walletAddress);
+        const portfolioResponse = await apiService.getPortfolioOverview(activeWalletAddress);
         portfolioContext = portfolioResponse.overview;
       } catch (err) {
         console.warn('Could not load portfolio for context:', err);
       }
 
+      // Check if Gemini API key is configured
+      if (!apiKeyConfigured) {
+        setError('GEMINI_API_KEY is not configured. Please add it to your backend .env file and restart the server.');
+        setStatus('error');
+        setLoading(false);
+        return;
+      }
+
       const response = await apiService.sendAnalystMessage({
-        walletAddress,
+        walletAddress: activeWalletAddress,
         prompt: trimmed,
         history: historyPayload,
-        overview: portfolioContext,
-        provider: aiProvider
+        overview: portfolioContext
       });
 
       if (response.message) {
-        const assistantMessage = createMessage('assistant', response.message, { source: response.source });
+        const assistantMessage = createMessage('assistant', response.message, { source: 'gemini' });
         setMessages((prev) => [...prev, assistantMessage]);
       }
 
       setNote(response.note || '');
       setMeta(response.meta || null);
 
-      if (response.source === 'gemini' || response.source === 'chatgpt' || response.source === 'claude' || response.source === 'groq' || response.source === 'mistral' || response.source === 'together') {
+      if (response.source === 'gemini') {
         setStatus('live');
       } else if (response.source === 'fallback') {
         setStatus('fallback');
+        if (response.note && (response.note.includes('not configured') || response.note.includes('not available'))) {
+          setError(response.note);
+        }
       }
     } catch (err) {
       console.error('AI Assistant chat failed:', err);
-      setError(err.message || 'Unable to fetch AI response.');
+      const errorMessage = err.message || 'Unable to fetch AI response.';
+      setError(errorMessage);
       setStatus('error');
+      showError('Failed to get AI response. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeWalletAddress, isConnected, messages, loading, showError]);
 
   const statusBadge = useMemo(() => {
     const descriptor = STATUS_COPY[status] || STATUS_COPY.idle;
@@ -220,7 +240,6 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
 
   const renderMessage = (message) => {
     const isUser = message.role === 'user';
-    const provider = message.source || 'gemini';
 
     return (
       <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
@@ -229,12 +248,12 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
             className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
               isUser
                 ? 'bg-[#1a73e8] text-white'
-                : `bg-gradient-to-r ${AI_PROVIDERS[provider]?.color || 'from-purple-500 to-pink-500'} text-white`
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
             }`}
           >
             {!isUser && (
               <div className="text-xs font-medium mb-1 opacity-90">
-                {AI_PROVIDERS[provider]?.logo} {AI_PROVIDERS[provider]?.name || 'AI'}
+                🔮 Gemini
               </div>
             )}
             {message.content}
@@ -245,18 +264,16 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0f0f0f] max-w-3xl mx-auto">
-      {/* AI Provider Selector - Minimal */}
-      <div className="px-4 py-2 border-b border-[#1f1f1f] flex items-center justify-end">
-        <select
-          value={aiProvider}
-          onChange={(e) => setAiProvider(e.target.value)}
-          className="text-xs bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-1 text-gray-300 focus:outline-none focus:border-[#3a3a3a]"
-        >
-          {Object.entries(AI_PROVIDERS).map(([key, provider]) => (
-            <option key={key} value={key}>{provider.logo} {provider.name}</option>
-          ))}
-        </select>
+    <div className="h-full flex flex-col bg-black max-w-3xl mx-auto">
+      {/* Header - Gemini-powered */}
+      <div className="px-6 py-3 border-b border-[#1f1f1f] flex items-center justify-between bg-black">
+        <div className="text-xs text-gray-400">
+          {apiKeyConfigured ? (
+            <span className="text-emerald-400">✓ Powered by Google Gemini</span>
+          ) : (
+            <span className="text-amber-400">⚠️ Gemini API key not configured</span>
+          )}
+        </div>
       </div>
 
       {/* Chat area - ChatGPT/Gemini style */}
@@ -267,19 +284,30 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
         {messages.length === 0 && prefillAttempted && !loading && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-md">
-              <p className="text-gray-500 text-sm mb-6">
+              {error && (
+                <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                  <p className="text-amber-400 text-sm font-medium mb-2">⚠️ Configuration Required</p>
+                  <p className="text-gray-300 text-xs">{error}</p>
+                  <p className="text-gray-400 text-xs mt-2">
+                    Add the API key to <code className="bg-black/50 px-1 rounded">backend/.env</code> and restart the server.
+                  </p>
+                </div>
+              )}
+              <p className="text-gray-400 text-sm mb-6">
                 {status === 'fallback'
-                  ? 'AI is offline, but I still have curated strategies ready. Ask away.'
+                  ? 'Gemini is offline, but I still have curated strategies ready. Ask away.'
+                  : status === 'error'
+                  ? 'Please configure Gemini API key to use the AI Assistant.'
                   : "Start a conversation about your portfolio, allocations, or crypto strategy."}
               </p>
               {/* Suggested prompts - Minimal */}
               <div className="flex flex-wrap gap-2 justify-center">
-                {SUGGESTED_PROMPTS.map((prompt) => (
+                {SUGGESTED_PROMPTS.slice(0, 4).map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
                     onClick={() => setInput(prompt)}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] text-gray-400 hover:text-white hover:border-[#3a3a3a] transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[#1f1f1f] bg-[#0f0f0f] text-gray-300 hover:text-white hover:border-[#2a2a2a] transition-colors"
                   >
                     {prompt}
                   </button>
@@ -293,11 +321,11 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-[#1a1a1a] rounded-2xl px-4 py-3 text-sm text-gray-400">
+            <div className="bg-[#0f0f0f] rounded-2xl px-4 py-3 text-sm text-gray-300">
               <span className="inline-flex items-center gap-2">
-                <span className="w-1 h-1 bg-gray-400 rounded-full animate-pulse"></span>
-                <span className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
-                <span className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
+                <span className="w-1 h-1 bg-gray-300 rounded-full animate-pulse"></span>
+                <span className="w-1 h-1 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
+                <span className="w-1 h-1 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
               </span>
             </div>
           </div>
@@ -316,8 +344,8 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
         </div>
       )}
 
-      {/* Input area - ChatGPT/Gemini style - Fixed at bottom */}
-      <div className="border-t border-[#1f1f1f] bg-[#0f0f0f] px-4 py-3">
+      {/* Input area - Gemini dark mode - Fixed at bottom */}
+      <div className="border-t border-[#1f1f1f] bg-black px-4 py-3">
         <form onSubmit={handleSend} className="max-w-3xl mx-auto">
           <div className="flex items-end gap-2">
             <div className="flex-1 relative">
@@ -331,10 +359,10 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
                     handleSend(event);
                   }
                 }}
-                placeholder={walletAddress ? 'Message Phanta...' : 'Connect a wallet to start chatting.'}
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-sm text-white placeholder-gray-500 px-4 py-2.5 pr-20 focus:outline-none focus:border-[#3a3a3a] resize-none"
+                placeholder={activeWalletAddress && isConnected ? 'Message Phanta (powered by Gemini)...' : 'Connect a wallet to start chatting.'}
+                className="w-full bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-sm text-white placeholder-gray-500 px-4 py-2.5 pr-20 focus:outline-none focus:border-[#2a2a2a] resize-none"
                 rows={1}
-                disabled={!walletAddress || loading}
+                disabled={!activeWalletAddress || !isConnected || loading}
               />
               <div className="absolute bottom-2.5 right-2">
                 {statusBadge}
@@ -343,7 +371,7 @@ const GeminiAnalystPanel = ({ walletAddress }) => {
             <button
               type="submit"
               className="px-4 py-2.5 rounded-xl text-sm font-normal bg-[#1a73e8] text-white hover:bg-[#1557b0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!walletAddress || loading || !input.trim()}
+              disabled={!activeWalletAddress || !isConnected || loading || !input.trim()}
             >
               {loading ? '...' : 'Send'}
             </button>

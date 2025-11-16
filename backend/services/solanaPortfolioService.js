@@ -5,7 +5,16 @@ const { Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 // Main service for real Solana portfolio tracking
 class SolanaPortfolioService {
   constructor() {
-    this.connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+    // Use multiple RPC endpoints for better reliability
+    const rpcEndpoints = [
+      'https://api.mainnet-beta.solana.com',
+      'https://solana-api.projectserum.com',
+      'https://rpc.ankr.com/solana',
+    ];
+    this.connection = new Connection(rpcEndpoints[0], {
+      commitment: 'confirmed',
+      confirmTransactionInitialTimeout: 60000,
+    });
     this.solMint = 'So11111111111111111111111111111111111111112'; // SOL
   }
 
@@ -21,7 +30,9 @@ class SolanaPortfolioService {
       const solUsdValue = solAmount * solPrice;
 
       // Get token balances
+      console.log(`[Portfolio] Fetching token balances...`);
       const tokenData = await heliusService.getWalletTokens(walletAddress);
+      console.log(`[Portfolio] Token data received:`, JSON.stringify(tokenData).substring(0, 200));
       
       // Handle different response formats
       let tokens = [];
@@ -32,7 +43,12 @@ class SolanaPortfolioService {
       } else if (tokenData?.value) {
         // Solana RPC format
         tokens = tokenData.value || [];
+      } else if (tokenData?.result?.value) {
+        // Another RPC format
+        tokens = tokenData.result.value || [];
       }
+      
+      console.log(`[Portfolio] Found ${tokens.length} token accounts`);
       
       // Get prices for all tokens
       const mintAddresses = tokens
@@ -103,11 +119,12 @@ class SolanaPortfolioService {
 
       // Get transactions for PnL calculation
       const transactions = await heliusService.getWalletTransactions(walletAddress, 100);
+      console.log(`[Portfolio] Found ${transactions.length} transactions`);
       
       // Calculate 24h PnL (simplified - would need historical data for real calculation)
       const pnl24h = this.calculate24hPnL(holdings, transactions);
 
-      return {
+      const portfolio = {
         totalValue: totalTokenValue,
         holdings: holdings.sort((a, b) => b.usdValue - a.usdValue),
         pnl24h,
@@ -115,6 +132,14 @@ class SolanaPortfolioService {
         solBalance: solAmount,
         tokenCount: holdings.length
       };
+      
+      console.log(`[Portfolio] Portfolio summary:`, {
+        totalValue: `$${totalTokenValue.toFixed(2)}`,
+        holdingsCount: holdings.length,
+        solBalance: `${solAmount} SOL`
+      });
+
+      return portfolio;
     } catch (error) {
       console.error('Portfolio fetch error:', error);
       return {

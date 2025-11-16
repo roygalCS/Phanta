@@ -88,6 +88,7 @@ const initDatabase = () => {
         CREATE TABLE IF NOT EXISTS groups (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           group_address TEXT UNIQUE NOT NULL,
+          join_code TEXT UNIQUE NOT NULL,
           owner TEXT NOT NULL,
           name TEXT NOT NULL,
           required_deposit REAL NOT NULL,
@@ -96,6 +97,23 @@ const initDatabase = () => {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+      
+      // Add join_code column to existing groups table if it doesn't exist
+      db.run(`ALTER TABLE groups ADD COLUMN join_code TEXT UNIQUE`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding join_code column:', err);
+        } else {
+          // Generate join codes for existing groups that don't have one
+          db.all(`SELECT id FROM groups WHERE join_code IS NULL`, [], (err, rows) => {
+            if (!err && rows) {
+              rows.forEach(row => {
+                const joinCode = `PHANTA-${row.id.toString().padStart(6, '0')}`;
+                db.run(`UPDATE groups SET join_code = ? WHERE id = ?`, [joinCode, row.id]);
+              });
+            }
+          });
+        }
+      });
 
       // Group members table
       db.run(`

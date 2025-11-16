@@ -1,13 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useWallet } from './WalletContext';
 import apiService from './services/api';
 import PortfolioAnalytics from './components/PortfolioAnalytics';
 import TransactionTable from './components/TransactionTable';
 import GeminiSummaryCard from './components/GeminiSummaryCard';
 import TradingRecommendations from './components/TradingRecommendations';
+import QuickStats from './components/QuickStats';
+import PortfolioCard from './components/PortfolioCard';
+import AnimatedNumber from './components/AnimatedNumber';
+import { SkeletonCard, SkeletonTable } from './components/Skeleton';
+import { useToast } from './hooks/useToast';
+import { exportToCSV, exportToJSON } from './utils/export';
 
 const Dashboard = ({ initialTab = 'overview' }) => {
-  const { account, balance } = useWallet();
+  const { account, balance, isConnected } = useWallet();
+  const { success, error: showError } = useToast();
   const [overview, setOverview] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loadingOverview, setLoadingOverview] = useState(false);
@@ -17,10 +24,50 @@ const Dashboard = ({ initialTab = 'overview' }) => {
   const [funds, setFunds] = useState([]);
   const [newFund, setNewFund] = useState({ name: '', thesis: '' });
   const [fundError, setFundError] = useState('');
+  const [lastRefresh, setLastRefresh] = useState(null);
 
   useEffect(() => {
     setSelectedTab(initialTab);
   }, [initialTab]);
+
+  const loadOverview = useCallback(async (showToast = false) => {
+    if (!account) return;
+    
+    setLoadingOverview(true);
+    try {
+      const response = await apiService.getPortfolioOverview(account);
+      setOverview(response.overview);
+      setError(null);
+      setLastRefresh(new Date());
+      if (showToast) {
+        success('Portfolio data refreshed!');
+      }
+    } catch (err) {
+      console.error('Unable to load overview:', err);
+      setError('We could not load your portfolio snapshot. Please retry shortly.');
+      setOverview(null);
+      if (showToast) {
+        showError('Failed to refresh portfolio data');
+      }
+    } finally {
+      setLoadingOverview(false);
+    }
+  }, [account, success, showError]);
+
+  const loadTransactions = useCallback(async () => {
+    if (!account) return;
+    
+    setLoadingTransactions(true);
+    try {
+      const response = await apiService.getFinanceTransactions(account);
+      setTransactions(response.transactions || []);
+    } catch (err) {
+      console.error('Unable to load transactions:', err);
+      setTransactions([]);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, [account]);
 
   useEffect(() => {
     if (!account) {
@@ -29,37 +76,16 @@ const Dashboard = ({ initialTab = 'overview' }) => {
       return;
     }
 
-    const loadOverview = async () => {
-      setLoadingOverview(true);
-      try {
-        const response = await apiService.getPortfolioOverview(account);
-        setOverview(response.overview);
-        setError(null);
-      } catch (err) {
-        console.error('Unable to load overview:', err);
-        setError('We could not load your portfolio snapshot. Please retry shortly.');
-        setOverview(null);
-      } finally {
-        setLoadingOverview(false);
-      }
-    };
-
-    const loadTransactions = async () => {
-      setLoadingTransactions(true);
-      try {
-        const response = await apiService.getFinanceTransactions(account);
-        setTransactions(response.transactions || []);
-      } catch (err) {
-        console.error('Unable to load transactions:', err);
-        setTransactions([]);
-      } finally {
-        setLoadingTransactions(false);
-      }
-    };
-
     loadOverview();
     loadTransactions();
-  }, [account]);
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      loadOverview();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [account, loadOverview, loadTransactions]);
 
   // Removed fake funds initialization - only show user-created funds
 
@@ -91,13 +117,13 @@ const Dashboard = ({ initialTab = 'overview' }) => {
     if (loadingOverview && !overview) {
       return (
         <div className="space-y-6">
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 animate-pulse h-48" />
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 animate-pulse h-80" />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       );
     }
 
-    if (!overview) {
+    if (!isConnected || !account) {
       return (
         <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 text-slate-400">
           Connect a wallet to populate your dashboard.
@@ -105,15 +131,92 @@ const Dashboard = ({ initialTab = 'overview' }) => {
       );
     }
 
+    if (!overview && !loadingOverview) {
+      return (
+        <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 text-center">
+          <div className="text-5xl mb-4">📊</div>
+          <h3 className="text-lg font-semibold text-slate-200 mb-2">No Portfolio Data</h3>
+          <p className="text-sm text-slate-400 mb-4">
+            {error || 'Unable to load portfolio data. This could be because:'}
+          </p>
+          <ul className="text-xs text-slate-500 text-left max-w-md mx-auto space-y-1 mb-4">
+            <li>• Your wallet has no tokens or SOL</li>
+            <li>• RPC endpoints are temporarily unavailable</li>
+            <li>• Network connectivity issues</li>
+          </ul>
+          <button
+            onClick={() => {
+              setLoadingOverview(true);
+              setError(null);
+              const loadOverview = async () => {
+                try {
+                  const response = await apiService.getPortfolioOverview(account);
+                  setOverview(response.overview);
+                  setError(null);
+                } catch (err) {
+                  console.error('Unable to load overview:', err);
+                  setError('We could not load your portfolio snapshot. Please retry shortly.');
+                  setOverview(null);
+                } finally {
+                  setLoadingOverview(false);
+                }
+              };
+              loadOverview();
+            }}
+            className="px-6 py-2.5 bg-[#1a73e8] text-white rounded-xl text-sm hover:bg-[#1557b0] transition-colors"
+          >
+            Retry Loading
+          </button>
+        </div>
+      );
+    }
+
+    if (!overview) {
+      return null; // Still loading
+    }
+
     return (
       <div className="space-y-6">
+        {/* Quick Stats */}
+        <QuickStats overview={overview} onRefresh={() => loadOverview(true)} />
+
+        {/* Main Portfolio Card */}
         <div className="bg-indigo-500/15 border border-indigo-500/30 rounded-3xl p-8 shadow-[0_30px_80px_rgba(79,70,229,0.25)]">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-sm uppercase tracking-[0.35em] text-indigo-200">Total assets</p>
+              <p className="text-4xl sm:text-5xl font-semibold text-indigo-50 mt-2">
+                $<AnimatedNumber value={overview.balances.totalUsd} decimals={0} />
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {lastRefresh && (
+                <span className="text-xs text-gray-400">
+                  Updated {lastRefresh.toLocaleTimeString()}
+                </span>
+              )}
+              <button
+                onClick={() => loadOverview(true)}
+                disabled={loadingOverview}
+                className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title="Refresh portfolio data"
+              >
+                {loadingOverview ? (
+                  <>
+                    <span className="animate-spin">⟳</span>
+                    <span>Refreshing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
           <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
             <div className="space-y-4">
-              <p className="text-sm uppercase tracking-[0.35em] text-indigo-200">Total assets</p>
-              <p className="text-4xl sm:text-5xl font-semibold text-indigo-50">
-                ${overview.balances.totalUsd.toLocaleString()}
-              </p>
               <div className="flex flex-wrap gap-4 text-sm text-indigo-100/80">
                 <span>{overview.balances.crypto.amount.toFixed(2)} {overview.balances.crypto.symbol}</span>
                 <span>• Stable reserve ${overview.balances.stablecoinsUsd.toLocaleString()}</span>
@@ -124,10 +227,12 @@ const Dashboard = ({ initialTab = 'overview' }) => {
               <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-4">
                 <p className="text-xs uppercase tracking-widest text-indigo-200/80">24h PnL</p>
                 <p className={`text-lg font-semibold ${overview.growth.percentChange >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {overview.growth.percentChange > 0 ? '+' : ''}{overview.growth.percentChange?.toFixed(2) || '0.00'}%
+                  {overview.growth.percentChange > 0 ? '+' : ''}
+                  <AnimatedNumber value={overview.growth.percentChange || 0} decimals={2} suffix="%" />
                 </p>
                 <p className="text-xs mt-1 text-indigo-100/70">
-                  {overview.growth.deltaUsd > 0 ? '+' : ''}${overview.growth.deltaUsd?.toLocaleString() || '0.00'}
+                  {overview.growth.deltaUsd > 0 ? '+' : ''}$
+                  <AnimatedNumber value={Math.abs(overview.growth.deltaUsd || 0)} decimals={2} />
                 </p>
               </div>
               {overview.riskAnalysis && (
@@ -163,28 +268,41 @@ const Dashboard = ({ initialTab = 'overview' }) => {
         {/* Real Holdings Display */}
         {overview?.holdings && overview.holdings.length > 0 && (
           <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">Portfolio Holdings</h3>
-            <div className="space-y-2">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-100">Portfolio Holdings</h3>
+              <button
+                onClick={() => {
+                  const exportData = overview.holdings.map(h => ({
+                    Symbol: h.symbol,
+                    Amount: h.amount,
+                    Price: h.price,
+                    'USD Value': h.usdValue,
+                    Percentage: `${((h.usdValue / overview.balances.totalUsd) * 100).toFixed(2)}%`
+                  }));
+                  exportToCSV(exportData, 'phanta-holdings');
+                  success('Holdings exported!');
+                }}
+                className="text-xs text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1"
+              >
+                <span>📥</span>
+                <span>Export</span>
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
               {overview.holdings.slice(0, 10).map((holding, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-slate-900/80 rounded-xl p-3 border border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                      {holding.symbol?.charAt(0) || '?'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-100">{holding.symbol || 'Unknown'}</p>
-                      <p className="text-xs text-slate-400">{holding.amount?.toFixed(4) || '0'} @ ${holding.price?.toFixed(4) || '0'}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-100">${holding.usdValue?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-slate-400">
-                      {((holding.usdValue / overview.balances.totalUsd) * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
+                <PortfolioCard
+                  key={holding.mint || idx}
+                  holding={holding}
+                  totalValue={overview.balances.totalUsd}
+                  index={idx}
+                />
               ))}
             </div>
+            {overview.holdings.length > 10 && (
+              <p className="text-xs text-gray-400 mt-4 text-center">
+                Showing top 10 of {overview.holdings.length} holdings
+              </p>
+            )}
           </div>
         )}
 

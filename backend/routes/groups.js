@@ -26,6 +26,7 @@ router.get('/user/:walletAddress', async (req, res) => {
         id: g.id,
         name: g.name,
         groupAddress: g.group_address,
+        joinCode: g.join_code,
         owner: g.owner,
         requiredDeposit: g.required_deposit,
         memberCount: g.member_count || 0,
@@ -49,11 +50,14 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
+    // Generate a short join code
+    const joinCode = `PHANTA-${Date.now().toString().slice(-6)}`;
+
     // Create group
     const result = await runQueryExecute(`
-      INSERT INTO groups (group_address, owner, name, required_deposit, status, created_at)
-      VALUES (?, ?, ?, ?, 'active', datetime('now'))
-    `, [groupAddress, owner, name, requiredDeposit]);
+      INSERT INTO groups (group_address, join_code, owner, name, required_deposit, status, created_at)
+      VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))
+    `, [groupAddress, joinCode, owner, name, requiredDeposit]);
 
     const groupId = result.id;
 
@@ -69,6 +73,7 @@ router.post('/create', async (req, res) => {
         id: groupId,
         name,
         groupAddress,
+        joinCode,
         owner,
         requiredDeposit,
         memberCount: 1,
@@ -85,20 +90,28 @@ router.post('/create', async (req, res) => {
 // Join group
 router.post('/join', async (req, res) => {
   try {
-    const { groupAddress, member, email, deposit } = req.body;
+    const { groupAddress, joinCode, member, email, deposit } = req.body;
 
-    if (!groupAddress || !member || !deposit) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if ((!groupAddress && !joinCode) || !member || !deposit) {
+      return res.status(400).json({ success: false, message: 'Missing required fields (need groupAddress or joinCode)' });
     }
 
-    // Get group
-    const group = await runQuerySingle(`
-      SELECT * FROM groups WHERE group_address = ?
-    `, [groupAddress]);
+    // Get group by address or join code
+    let group;
+    if (groupAddress) {
+      group = await runQuerySingle(`SELECT * FROM groups WHERE group_address = ?`, [groupAddress]);
+    } else if (joinCode) {
+      group = await runQuerySingle(`SELECT * FROM groups WHERE join_code = ?`, [joinCode.toUpperCase()]);
+    } else {
+      return res.status(400).json({ success: false, message: 'Either groupAddress or joinCode is required' });
+    }
 
     if (!group) {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }
+    
+    // Use the resolved group address for on-chain operations
+    const resolvedGroupAddress = group.group_address;
 
     // Check if already a member
     const existingMember = await runQuerySingle(`
@@ -128,7 +141,17 @@ router.post('/join', async (req, res) => {
       `, [group.id]);
     }
 
-    res.json({ success: true, message: 'Joined group successfully' });
+    res.json({ 
+      success: true, 
+      message: 'Joined group successfully',
+      groupAddress: resolvedGroupAddress, // Return resolved address for on-chain operations
+      group: {
+        id: group.id,
+        name: group.name,
+        groupAddress: resolvedGroupAddress,
+        joinCode: group.join_code,
+      }
+    });
   } catch (error) {
     console.error('Error joining group:', error);
     res.status(500).json({ success: false, message: 'Failed to join group' });

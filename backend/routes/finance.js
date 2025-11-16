@@ -2,13 +2,17 @@ const express = require('express');
 const router = express.Router();
 const financeService = require('../services/financeService');
 const stockAnalyticsService = require('../services/stockAnalyticsService');
+const cryptoAnalyticsService = require('../services/cryptoAnalyticsService');
 const jupiterService = require('../services/jupiterService');
 
 // Portfolio overview for a wallet
 router.get('/overview/:walletAddress', async (req, res) => {
   try {
     const { walletAddress } = req.params;
+    console.log(`[API] Fetching overview for wallet: ${walletAddress}`);
+    
     const overview = await financeService.getOverview(walletAddress);
+    console.log(`[API] Overview fetched successfully, total USD: $${overview?.balances?.totalUsd || 0}`);
 
     res.json({
       success: true,
@@ -16,9 +20,11 @@ router.get('/overview/:walletAddress', async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to fetch portfolio overview:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Unable to load portfolio overview right now.'
+      message: error.message || 'Unable to load portfolio overview right now.',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -109,7 +115,6 @@ router.post('/ai-suggestions', async (req, res) => {
       prefill = false,
       overview,
       context,
-      provider = 'gemini',
       groupContext = null
     } = req.body || {};
 
@@ -134,7 +139,6 @@ router.post('/ai-suggestions', async (req, res) => {
       prefill: Boolean(prefill),
       overview,
       contextBlocks,
-      provider,
       groupContext
     });
 
@@ -168,6 +172,27 @@ router.post('/stocks/metrics', async (req, res) => {
       success: false,
       message: error.message || 'Unable to analyse the requested tickers right now.',
       errors: error.details || []
+    });
+  }
+});
+
+// Crypto analytics (CoinGecko powered)
+router.post('/crypto/metrics', async (req, res) => {
+  try {
+    const { symbols, range, interval } = req.body || {};
+    const insights = await cryptoAnalyticsService.getCryptoInsights({ symbols, range, interval });
+
+    res.json({
+      success: true,
+      ...insights
+    });
+  } catch (error) {
+    console.error('Failed to analyse crypto:', error);
+    const statusCode = error.errors ? 207 : 400;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Unable to analyse the requested cryptocurrencies right now.',
+      errors: error.errors || []
     });
   }
 });

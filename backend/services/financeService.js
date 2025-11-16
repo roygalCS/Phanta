@@ -1,108 +1,7 @@
 const env = require('../config/loadEnv');
 const { DEFAULT_MODEL: GEMINI_MODEL, generateContent: generateGeminiContent } = require('./geminiClient');
-const { DEFAULT_MODEL: CHATGPT_MODEL, generateContent: generateChatGPTContent } = require('./chatgptClient');
-const { DEFAULT_MODEL: CLAUDE_MODEL, generateContent: generateClaudeContent } = require('./claudeClient');
-const { DEFAULT_MODEL: GROQ_MODEL, generateContent: generateGroqContent } = require('./groqClient');
-const { DEFAULT_MODEL: MISTRAL_MODEL, generateContent: generateMistralContent } = require('./mistralClient');
-const { DEFAULT_MODEL: TOGETHER_MODEL, generateContent: generateTogetherContent } = require('./togetherClient');
 const solanaPortfolioService = require('./solanaPortfolioService');
 const heliusService = require('./heliusService');
-
-const DEFAULT_PORTFOLIO = {
-  overview: {
-    ownerName: 'Alex Rivers',
-    riskProfile: 'moderate',
-    balances: {
-      crypto: {
-        symbol: 'ETH',
-        amount: 1.82,
-        usdValue: 6435.21
-      },
-      stablecoinsUsd: 2150.0,
-      fiatEquivalentUsd: 6210.31
-    },
-    growth: {
-      lastPurchaseDate: '2024-11-15',
-      lastPurchaseUsdValue: 5720.0,
-      lastPurchaseCryptoPriceUsd: 2265.0
-    },
-    runwayReserveUsd: 950.0,
-    performanceTrend: {
-      labels: ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-      usdBalances: [4280, 4725, 5180, 5660, 6025, 6435],
-      cryptoHoldings: [1.21, 1.34, 1.46, 1.59, 1.68, 1.82]
-    },
-    savingsAllocation: [
-      { label: 'Core ETH Holdings', percentage: 42, usdValue: 2702 },
-      { label: 'Staked ETH (Lido)', percentage: 23, usdValue: 1480 },
-      { label: 'Stablecoin Yield', percentage: 18, usdValue: 1130 },
-      { label: 'RWA Treasuries', percentage: 9, usdValue: 578 },
-      { label: 'AI & Gaming Tokens', percentage: 8, usdValue: 515 }
-    ],
-    incomeStreams: [
-      { label: 'Liquid Staking Rewards', apr: 4.1, usdPerMonth: 22.5 },
-      { label: 'Stablecoin Vault', apr: 7.6, usdPerMonth: 13.7 },
-      { label: 'AI Index Fund', apr: 11.3, usdPerMonth: 9.8 }
-    ],
-    comparison: {
-      labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug'],
-      cryptoUsdValue: [4725, 5180, 5660, 6025, 6435],
-      fiatUsdValue: [4510, 4825, 5290, 5740, 6125]
-    }
-  },
-  transactions: [
-    {
-      id: 'txn-001',
-      date: '2024-08-12T09:34:00Z',
-      type: 'Deposit',
-      asset: 'ETH',
-      amountCrypto: 0.85,
-      amountUsd: 2950,
-      status: 'completed',
-      counterparty: 'MetaMask Swap'
-    },
-    {
-      id: 'txn-002',
-      date: '2024-08-09T16:12:00Z',
-      type: 'Yield Claim',
-      asset: 'stETH',
-      amountCrypto: 0.03,
-      amountUsd: 105,
-      status: 'completed',
-      counterparty: 'Lido'
-    },
-    {
-      id: 'txn-003',
-      date: '2024-08-04T12:21:00Z',
-      type: 'Swap',
-      asset: 'USDC -> ETH',
-      amountCrypto: 0.42,
-      amountUsd: 1460,
-      status: 'completed',
-      counterparty: 'Uniswap v3'
-    },
-    {
-      id: 'txn-004',
-      date: '2024-07-28T19:50:00Z',
-      type: 'Allocation',
-      asset: 'USDC',
-      amountCrypto: 850,
-      amountUsd: 850,
-      status: 'pending',
-      counterparty: 'Maple Finance Pool'
-    },
-    {
-      id: 'txn-005',
-      date: '2024-07-18T08:05:00Z',
-      type: 'Deposit',
-      asset: 'USDC',
-      amountCrypto: 1200,
-      amountUsd: 1200,
-      status: 'completed',
-      counterparty: 'Stripe On-Ramp'
-    }
-  ]
-};
 
 const FALLBACK_SUGGESTIONS = [
   {
@@ -128,55 +27,44 @@ const FALLBACK_SUGGESTIONS = [
   }
 ];
 
-const buildOverview = (walletAddress) => {
-  const { overview } = DEFAULT_PORTFOLIO;
-  const currentUsd = overview.balances.crypto.usdValue + overview.balances.stablecoinsUsd;
-  const deltaUsd = currentUsd - overview.growth.lastPurchaseUsdValue;
-  const pctChange = overview.growth.lastPurchaseUsdValue > 0
-    ? (deltaUsd / overview.growth.lastPurchaseUsdValue) * 100
-    : 0;
-
-  return {
-    walletAddress,
-    ownerName: overview.ownerName,
-    riskProfile: overview.riskProfile,
-    balances: {
-      crypto: overview.balances.crypto,
-      stablecoinsUsd: overview.balances.stablecoinsUsd,
-      fiatEquivalentUsd: overview.balances.fiatEquivalentUsd,
-      totalUsd: Number((currentUsd).toFixed(2))
-    },
-    growth: {
-      deltaUsd: Number(deltaUsd.toFixed(2)),
-      percentChange: Number(pctChange.toFixed(2)),
-      lastPurchaseDate: overview.growth.lastPurchaseDate,
-      lastPurchaseUsdValue: overview.growth.lastPurchaseUsdValue,
-      lastPurchaseCryptoPriceUsd: overview.growth.lastPurchaseCryptoPriceUsd
-    },
-    runwayReserveUsd: overview.runwayReserveUsd,
-    performanceTrend: overview.performanceTrend,
-    savingsAllocation: overview.savingsAllocation,
-    incomeStreams: overview.incomeStreams,
-    comparison: overview.comparison,
-    lastUpdated: new Date().toISOString()
-  };
-};
-
 const getOverview = async (walletAddress) => {
   try {
+    console.log(`[Finance] Getting overview for wallet: ${walletAddress}`);
+    
     // Try to get real Solana portfolio data
     const realPortfolio = await solanaPortfolioService.getPortfolio(walletAddress);
+    console.log(`[Finance] Portfolio fetched:`, {
+      totalValue: realPortfolio.totalValue,
+      holdingsCount: realPortfolio.holdings.length,
+      solBalance: realPortfolio.solBalance
+    });
     
-    if (realPortfolio.totalValue > 0) {
+    // Always return data, even if totalValue is 0 (empty wallet)
+    if (realPortfolio) {
       // Use real data
-      const riskAnalysis = await solanaPortfolioService.getRiskAnalysis(realPortfolio);
+      const riskAnalysis = realPortfolio.totalValue > 0 
+        ? await solanaPortfolioService.getRiskAnalysis(realPortfolio)
+        : { riskScore: 0, riskLevel: 'low', warnings: [], recommendations: [] };
       
       // Format for frontend
-      const topHolding = realPortfolio.holdings[0] || {};
+      const topHolding = realPortfolio.holdings[0] || { symbol: 'SOL', amount: realPortfolio.solBalance || 0, usdValue: 0, price: 0 };
       const stablecoins = realPortfolio.holdings.filter(h => 
         h.symbol && (h.symbol.includes('USDC') || h.symbol.includes('USDT'))
       );
       const stablecoinsUsd = stablecoins.reduce((sum, h) => sum + h.usdValue, 0);
+      
+      // Ensure we have at least SOL in holdings
+      const holdings = realPortfolio.holdings.length > 0 
+        ? realPortfolio.holdings 
+        : [{
+            symbol: 'SOL',
+            mint: 'So11111111111111111111111111111111111111112',
+            amount: realPortfolio.solBalance || 0,
+            usdValue: (realPortfolio.solBalance || 0) * (topHolding.price || 150),
+            price: topHolding.price || 150
+          }];
+      
+      const totalValue = realPortfolio.totalValue || ((realPortfolio.solBalance || 0) * (topHolding.price || 150));
       
       return {
         walletAddress,
@@ -185,62 +73,103 @@ const getOverview = async (walletAddress) => {
         balances: {
           crypto: {
             symbol: topHolding.symbol || 'SOL',
-            amount: topHolding.amount || 0,
-            usdValue: topHolding.usdValue || 0
+            amount: topHolding.amount || realPortfolio.solBalance || 0,
+            usdValue: topHolding.usdValue || totalValue
           },
           stablecoinsUsd: stablecoinsUsd,
-          fiatEquivalentUsd: realPortfolio.totalValue,
-          totalUsd: realPortfolio.totalValue
+          fiatEquivalentUsd: totalValue,
+          totalUsd: totalValue
         },
         growth: {
-          deltaUsd: realPortfolio.pnl24h,
-          percentChange: realPortfolio.pnl24hPercent,
+          deltaUsd: realPortfolio.pnl24h || 0,
+          percentChange: realPortfolio.pnl24hPercent || 0,
           lastPurchaseDate: new Date().toISOString().split('T')[0],
-          lastPurchaseUsdValue: realPortfolio.totalValue - realPortfolio.pnl24h,
-          lastPurchaseCryptoPriceUsd: topHolding.price || 0
+          lastPurchaseUsdValue: totalValue - (realPortfolio.pnl24h || 0),
+          lastPurchaseCryptoPriceUsd: topHolding.price || 150
         },
         runwayReserveUsd: stablecoinsUsd,
         performanceTrend: {
           labels: ['6h', '12h', '18h', '24h'],
           usdBalances: [
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.75,
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.5,
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.25,
-            realPortfolio.totalValue
+            totalValue - (realPortfolio.pnl24h || 0) * 0.75,
+            totalValue - (realPortfolio.pnl24h || 0) * 0.5,
+            totalValue - (realPortfolio.pnl24h || 0) * 0.25,
+            totalValue
           ],
-          cryptoHoldings: realPortfolio.holdings.map(h => h.amount)
+          cryptoHoldings: holdings.map(h => h.amount)
         },
-        savingsAllocation: realPortfolio.holdings.slice(0, 5).map((h, i) => ({
+        savingsAllocation: holdings.slice(0, 5).map((h) => ({
           label: h.symbol,
-          percentage: (h.usdValue / realPortfolio.totalValue) * 100,
+          percentage: totalValue > 0 ? (h.usdValue / totalValue) * 100 : 0,
           usdValue: h.usdValue
         })),
         incomeStreams: [],
         comparison: {
           labels: ['6h', '12h', '18h', '24h'],
           cryptoUsdValue: [
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.75,
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.5,
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.25,
-            realPortfolio.totalValue
+            totalValue - (realPortfolio.pnl24h || 0) * 0.75,
+            totalValue - (realPortfolio.pnl24h || 0) * 0.5,
+            totalValue - (realPortfolio.pnl24h || 0) * 0.25,
+            totalValue
           ],
           fiatUsdValue: [
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.75,
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.5,
-            realPortfolio.totalValue - realPortfolio.pnl24h * 0.25,
-            realPortfolio.totalValue
+            totalValue - (realPortfolio.pnl24h || 0) * 0.75,
+            totalValue - (realPortfolio.pnl24h || 0) * 0.5,
+            totalValue - (realPortfolio.pnl24h || 0) * 0.25,
+            totalValue
           ]
         },
         riskAnalysis,
-        holdings: realPortfolio.holdings,
+        holdings: holdings,
         lastUpdated: new Date().toISOString()
       };
     }
   } catch (error) {
     console.error('Real portfolio fetch failed:', error.message);
+    console.error('Error stack:', error.stack);
+    // Return minimal data structure even on error
+    return {
+      walletAddress,
+      ownerName: 'Portfolio Owner',
+      riskProfile: 'moderate',
+      balances: {
+        crypto: { symbol: 'SOL', amount: 0, usdValue: 0 },
+        stablecoinsUsd: 0,
+        fiatEquivalentUsd: 0,
+        totalUsd: 0
+      },
+      growth: {
+        deltaUsd: 0,
+        percentChange: 0,
+        lastPurchaseDate: new Date().toISOString().split('T')[0],
+        lastPurchaseUsdValue: 0,
+        lastPurchaseCryptoPriceUsd: 0
+      },
+      runwayReserveUsd: 0,
+      performanceTrend: {
+        labels: ['6h', '12h', '18h', '24h'],
+        usdBalances: [0, 0, 0, 0],
+        cryptoHoldings: [0]
+      },
+      savingsAllocation: [],
+      incomeStreams: [],
+      comparison: {
+        labels: ['6h', '12h', '18h', '24h'],
+        cryptoUsdValue: [0, 0, 0, 0],
+        fiatUsdValue: [0, 0, 0, 0]
+      },
+      riskAnalysis: {
+        riskScore: 0,
+        riskLevel: 'low',
+        warnings: ['Unable to fetch portfolio data'],
+        recommendations: []
+      },
+      holdings: [],
+      lastUpdated: new Date().toISOString()
+    };
   }
   
-  // Return null if no real data available - don't show fake data
+  // Return null if portfolio service returned null
   return null;
 };
 
@@ -278,7 +207,6 @@ const formatFallbackMessage = () =>
     return `${index + 1}. ${idea.title}\n${idea.thesis}\nAllocation: ${idea.allocationSuggestion}\nRisk: ${idea.riskLevel}${steps}`;
   }).join('\n\n');
 
-
 const GEMINI_GENERATION_CONFIG = {
   temperature: Number(env.GEMINI_TEMPERATURE ?? 0.25),
   maxOutputTokens: Number(env.GEMINI_MAX_OUTPUT_TOKENS ?? 768),
@@ -296,7 +224,7 @@ const GEMINI_SAFETY_SETTINGS = Array.from(VALID_SAFETY_CATEGORIES).map((category
   threshold: env.GEMINI_SAFETY_THRESHOLD || 'BLOCK_MEDIUM_AND_ABOVE'
 }));
 
-const DEFAULT_PREFILL_PROMPT = 'Introduce yourself as Phanta, the user\'s AI-powered crypto banking assistant. Analyze their real Solana portfolio and give a concise summary of holdings, risk profile, and how you can help optimize their strategy.';
+const DEFAULT_PREFILL_PROMPT = 'Introduce yourself as Phanta, the user\'s AI-powered crypto banking assistant powered by Google Gemini. Analyze their real Solana portfolio and give a concise summary of holdings, risk profile, and how you can help optimize their strategy.';
 
 const extractCandidateText = (candidate) => {
   if (!candidate?.content?.parts?.length) {
@@ -313,7 +241,7 @@ const extractCandidateText = (candidate) => {
 const buildSystemInstruction = (overview, walletAddress, extraContext = []) => {
   const parts = [
     {
-      text: `You are Phanta, an expert AI-powered crypto banking assistant analyzing wallet ${walletAddress} on Solana. You have access to real on-chain data including token balances, prices, and portfolio composition.`
+      text: `You are Phanta, an expert AI-powered crypto banking assistant powered by Google Gemini, analyzing wallet ${walletAddress} on Solana. You have access to real on-chain data including token balances, prices, and portfolio composition.`
     },
     {
       text: 'Provide actionable insights: analyze risk, suggest rebalancing, identify opportunities, and warn about dangerous positions. Reference specific tokens and amounts when relevant.'
@@ -369,35 +297,17 @@ const mapHistoryToGemini = (history = []) =>
       parts: [{ text: message.content }]
     }));
 
-const mapHistoryToChatGPT = (history = []) =>
-  history
-    .filter((message) => ['assistant', 'user'].includes(message.role) && message.content)
-    .slice(-12)
-    .map((message) => ({
-      role: message.role === 'assistant' ? 'assistant' : 'user',
-      content: message.content
-    }));
-
-const mapHistoryToClaude = (history = []) =>
-  history
-    .filter((message) => ['assistant', 'user'].includes(message.role) && message.content)
-    .slice(-12)
-    .map((message) => ({
-      role: message.role === 'assistant' ? 'assistant' : 'user',
-      content: message.content
-    }));
-
 const buildPrefillFallback = (overview) => {
-  const { balances, growth } = overview;
-  const totalUsd = balances?.totalUsd ?? balances?.crypto?.usdValue + balances?.stablecoinsUsd;
+  const { balances, growth } = overview || {};
+  const totalUsd = balances?.totalUsd ?? (balances?.crypto?.usdValue || 0) + (balances?.stablecoinsUsd || 0);
 
   return [
-    "Gemini Analyst is running in offline mode, so here is a quick snapshot based on cached telemetry:",
+    "Gemini is running in offline mode, so here is a quick snapshot based on cached telemetry:",
     `• Total assets stand at ~$${Number(totalUsd || 0).toLocaleString()} with ${balances?.crypto?.amount?.toFixed?.(2) ?? '—'} ${
-      balances?.crypto?.symbol || 'ETH'
+      balances?.crypto?.symbol || 'SOL'
     } on book.`,
     `• Last recorded delta since your previous buy was ${growth?.percentChange ?? 0}% (${growth?.deltaUsd ? `$${growth.deltaUsd.toLocaleString()}` : 'N/A'}).`,
-    'Ask any question and the copilot will respond with playbooks even without live Gemini access.'
+    'Ask any question and Phanta will respond with playbooks even without live Gemini access.'
   ].join('\n');
 };
 
@@ -416,34 +326,9 @@ const formatFallbackResponse = (overview) => ({
   }
 });
 
-const buildFailureNote = (error) => {
-  if (!error) {
-    return 'Gemini service is unreachable. Using offline playbooks for now.';
-  }
-
-  const status = error.status || error?.response?.status;
-  if (status === 401 || status === 403) {
-    return 'Gemini rejected the request. Verify your API key, project access, and billing status.';
-  }
-
-  if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-    return 'Unable to reach Gemini. Check your network connectivity and firewall settings.';
-  }
-
-  const detail = error?.response?.error?.message || error?.message;
-  if (detail && detail.toLowerCase() === 'fetch failed') {
-    return 'Unable to reach Gemini. Check your internet connection or proxy settings.';
-  }
-  if (detail) {
-    return `Gemini error. Fallback strategies are active while we recover.`;
-  }
-
-  return 'Gemini is unavailable right now. Fallback strategies are active while we recover.';
-};
-
 const buildSystemInstructionText = (overview, walletAddress, extraContext = []) => {
   const parts = [
-    `You are Phanta, an expert AI-powered crypto banking assistant analyzing wallet ${walletAddress} on Solana. You have access to real on-chain data including token balances, prices, and portfolio composition.`,
+    `You are Phanta, an expert AI-powered crypto banking assistant powered by Google Gemini, analyzing wallet ${walletAddress} on Solana. You have access to real on-chain data including token balances, prices, and portfolio composition.`,
     'Provide actionable insights: analyze risk, suggest rebalancing, identify opportunities, and warn about dangerous positions. Reference specific tokens and amounts when relevant.',
     'Always close with a concrete recommendation or next step.'
   ];
@@ -469,7 +354,7 @@ const buildSystemInstructionText = (overview, walletAddress, extraContext = []) 
   return parts.join('\n\n');
 };
 
-const chatWithAssistant = async ({ walletAddress, question, prompt, history = [], overview, prefill = false, contextBlocks = [], provider = 'gemini', groupContext = null }) => {
+const chatWithAssistant = async ({ walletAddress, question, prompt, history = [], overview, prefill = false, contextBlocks = [], groupContext = null }) => {
   const portfolio = overview || (await getOverview(walletAddress));
   const userPrompt = (prompt ?? question ?? (prefill ? DEFAULT_PREFILL_PROMPT : '')).trim();
 
@@ -493,8 +378,8 @@ const chatWithAssistant = async ({ walletAddress, question, prompt, history = []
 
   const startedAt = Date.now();
 
-  // Try Gemini
-  if (provider === 'gemini' && env.GEMINI_API_KEY) {
+  // Use Gemini
+  if (env.GEMINI_API_KEY) {
     try {
       const contents = [...mapHistoryToGemini(history), { role: 'user', parts: [{ text: userPrompt }] }];
       const data = await generateGeminiContent({
@@ -525,177 +410,13 @@ const chatWithAssistant = async ({ walletAddress, question, prompt, history = []
     }
   }
 
-  // Try ChatGPT
-  if (provider === 'chatgpt' && env.CHATGPT_API_KEY) {
-    try {
-      const messages = [
-        ...mapHistoryToChatGPT(history),
-        { role: 'user', content: userPrompt }
-      ];
-      const data = await generateChatGPTContent({
-        messages,
-        systemInstruction: systemInstructionText,
-        temperature: 0.7,
-        maxTokens: 1000
-      });
-
-      const latencyMs = Date.now() - startedAt;
-      const text = data?.choices?.[0]?.message?.content?.trim();
-
-      if (text) {
-        return {
-          source: 'chatgpt',
-          message: text,
-          meta: {
-            model: data?.model || CHATGPT_MODEL,
-            usage: data?.usage || null,
-            latencyMs
-          }
-        };
-      }
-    } catch (error) {
-      console.error('ChatGPT request failed:', error);
-    }
-  }
-
-  // Try Claude
-  if (provider === 'claude' && env.CLAUDE_API_KEY) {
-    try {
-      const messages = [
-        ...mapHistoryToClaude(history),
-        { role: 'user', content: userPrompt }
-      ];
-      const data = await generateClaudeContent({
-        messages,
-        systemInstruction: systemInstructionText,
-        maxTokens: 1024
-      });
-
-      const latencyMs = Date.now() - startedAt;
-      const text = data?.content?.[0]?.text?.trim();
-
-      if (text) {
-        return {
-          source: 'claude',
-          message: text,
-          meta: {
-            model: data?.model || CLAUDE_MODEL,
-            usage: data?.usage || null,
-            latencyMs
-          }
-        };
-      }
-    } catch (error) {
-      console.error('Claude request failed:', error);
-    }
-  }
-
-  // Try Groq
-  if (provider === 'groq' && env.GROQ_API_KEY) {
-    try {
-      const messages = [
-        ...mapHistoryToChatGPT(history),
-        { role: 'user', content: userPrompt }
-      ];
-      const data = await generateGroqContent({
-        messages,
-        systemInstruction: systemInstructionText,
-        temperature: 0.7,
-        maxTokens: 1000
-      });
-
-      const latencyMs = Date.now() - startedAt;
-      const text = data?.choices?.[0]?.message?.content?.trim();
-
-      if (text) {
-        return {
-          source: 'groq',
-          message: text,
-          meta: {
-            model: data?.model || GROQ_MODEL,
-            usage: data?.usage || null,
-            latencyMs
-          }
-        };
-      }
-    } catch (error) {
-      console.error('Groq request failed:', error);
-    }
-  }
-
-  // Try Mistral
-  if (provider === 'mistral' && env.MISTRAL_API_KEY) {
-    try {
-      const messages = [
-        ...mapHistoryToChatGPT(history),
-        { role: 'user', content: userPrompt }
-      ];
-      const data = await generateMistralContent({
-        messages,
-        systemInstruction: systemInstructionText,
-        temperature: 0.7,
-        maxTokens: 1000
-      });
-
-      const latencyMs = Date.now() - startedAt;
-      const text = data?.choices?.[0]?.message?.content?.trim();
-
-      if (text) {
-        return {
-          source: 'mistral',
-          message: text,
-          meta: {
-            model: data?.model || MISTRAL_MODEL,
-            usage: data?.usage || null,
-            latencyMs
-          }
-        };
-      }
-    } catch (error) {
-      console.error('Mistral request failed:', error);
-    }
-  }
-
-  // Try Together AI
-  if (provider === 'together' && env.TOGETHER_API_KEY) {
-    try {
-      const messages = [
-        ...mapHistoryToChatGPT(history),
-        { role: 'user', content: userPrompt }
-      ];
-      const data = await generateTogetherContent({
-        messages,
-        systemInstruction: systemInstructionText,
-        temperature: 0.7,
-        maxTokens: 1000
-      });
-
-      const latencyMs = Date.now() - startedAt;
-      const text = data?.choices?.[0]?.message?.content?.trim();
-
-      if (text) {
-        return {
-          source: 'together',
-          message: text,
-          meta: {
-            model: data?.model || TOGETHER_MODEL,
-            usage: data?.usage || null,
-            latencyMs
-          }
-        };
-      }
-    } catch (error) {
-      console.error('Together AI request failed:', error);
-    }
-  }
-
   // Fallback
-  if (!env.GEMINI_API_KEY && !env.CHATGPT_API_KEY && !env.CLAUDE_API_KEY && !env.GROQ_API_KEY && !env.MISTRAL_API_KEY && !env.TOGETHER_API_KEY) {
+  if (!env.GEMINI_API_KEY) {
     return prefill
       ? {
           source: 'fallback',
           message: buildPrefillFallback(portfolio),
-          note: 'Set API keys to enable live AI insights.',
+          note: 'GEMINI_API_KEY is not configured. Please add it to your backend .env file and restart the server.',
           meta: {
             model: null,
             usage: null,
@@ -709,7 +430,7 @@ const chatWithAssistant = async ({ walletAddress, question, prompt, history = []
   return {
     source: 'fallback',
     message: formatFallbackMessage(),
-    note: `Selected provider (${provider}) is not available. Check API key configuration.`,
+    note: 'Gemini is currently unavailable. Showing curated fallback ideas instead.',
     meta: {
       model: null,
       usage: null,

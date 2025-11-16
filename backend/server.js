@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth');
 const orderRoutes = require('./routes/orders');
 const financeRoutes = require('./routes/finance');
 const groupRoutes = require('./routes/groups');
+const healthRoutes = require('./routes/health');
 
 const app = express();
 const PORT = env.PORT || 3001;
@@ -23,15 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/groups', groupRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Phanta Backend is running',
-    timestamp: new Date().toISOString()
-  });
-});
+app.use('/api/health', healthRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

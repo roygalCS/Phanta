@@ -1,16 +1,43 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Dashboard from '../Dashboard';
 import { useWallet } from '../WalletContext';
 import GeminiAnalystPanel from './AIAssistantPanel';
 import MarketIntel from './MarketIntel';
 import GroupManager from './GroupManager';
 import PhantaLogo from './PhantaLogo';
+import ToastContainer from './ToastContainer';
+import Tooltip from './Tooltip';
+import HelpModal from './HelpModal';
+import { useToast } from '../hooks/useToast';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import geminiLogo from '../assets/gemini-logo.svg';
 
 const Layout = () => {
   // Default to assistant (AI-first)
   const [activePage, setActivePage] = useState('assistant');
-  const { account, balance, disconnectWallet, userData } = useWallet();
+  const { account, balance, disconnectWallet, connectWallet, userData, isConnected } = useWallet();
+  const { toasts, removeToast, success, info } = useToast();
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    'ctrl+k': () => setActivePage('assistant'),
+    'ctrl+1': () => setActivePage('overview'),
+    'ctrl+2': () => setActivePage('transactions'),
+    'ctrl+3': () => setActivePage('market'),
+    'ctrl+4': () => setActivePage('groups'),
+    'ctrl+/': (e) => {
+      e.preventDefault();
+      setShowHelp(true);
+    }
+  });
+
+  useEffect(() => {
+    // Remove the info toast on page change - it's annoying
+    // if (activePage === 'assistant') {
+    //   info('Press Ctrl+K to focus AI Assistant, Ctrl+/ for shortcuts');
+    // }
+  }, [activePage, info]);
 
   const navigationItems = useMemo(
     () => [
@@ -29,7 +56,7 @@ const Layout = () => {
     // AI Assistant is the main view
     if (activePage === 'assistant') {
       return (
-        <div className="h-full bg-[#0f0f0f]">
+        <div className="h-full bg-black">
           <GeminiAnalystPanel walletAddress={account} />
         </div>
       );
@@ -49,29 +76,74 @@ const Layout = () => {
 
     // Default to AI Assistant
     return (
-      <div className="h-full bg-[#0f0f0f]">
+      <div className="h-full bg-black">
         <GeminiAnalystPanel walletAddress={account} />
       </div>
     );
   };
 
   return (
-    <div className="h-screen bg-[#0f0f0f] text-white flex flex-col">
-      {/* Minimal header - AI-first */}
-      <header className="px-6 py-4 border-b border-[#1f1f1f]">
+    <div className="h-screen bg-black text-white flex flex-col">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+      
+      {/* Header - Gemini dark mode style */}
+      <header className="px-8 py-5 border-b border-[#1f1f1f] bg-black">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Phanta bottle logo with hover animation */}
-            <PhantaLogo size={32} />
+          <div className="flex items-center gap-4">
+            {/* Phanta bottle logo with hover animation - larger */}
+            <PhantaLogo size={44} />
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a]">
-              <span className="text-xs text-gray-400">{balance || '0.0000'} SOL</span>
+          <div className="flex items-center gap-4">
+            {account && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(account);
+                  success('Wallet address copied!');
+                }}
+                className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors group"
+                title="Click to copy wallet address"
+              >
+                <span className="truncate max-w-[120px]">{account.slice(0, 4)}...{account.slice(-4)}</span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity">📋</span>
+              </button>
+            )}
+            <div className="flex items-center gap-2.5 bg-[#0f0f0f] px-4 py-2.5 rounded-xl border border-[#1f1f1f] hover:border-[#2a2a2a] transition-colors">
+              <span className="text-sm text-gray-100 font-medium">{balance || '0.0000'} SOL</span>
             </div>
+            {isConnected && (
+              <button
+                onClick={async () => {
+                  try {
+                    await disconnectWallet();
+                    await connectWallet();
+                    success('Account switched!');
+                  } catch (err) {
+                    // Error handled by wallet context
+                  }
+                }}
+                className="px-4 py-2.5 bg-[#0f0f0f] hover:bg-[#1a1a1a] text-sm text-gray-100 hover:text-white rounded-xl border border-[#1f1f1f] hover:border-[#2a2a2a] transition-all duration-200"
+                title="Switch to another Phantom account"
+              >
+                Switch Account
+              </button>
+            )}
+            <Tooltip content="Keyboard shortcuts (Ctrl+/)">
+              <button
+                onClick={() => setShowHelp(true)}
+                className="px-4 py-2.5 bg-[#0f0f0f] hover:bg-[#1a1a1a] text-sm text-gray-100 hover:text-white rounded-xl border border-[#1f1f1f] hover:border-[#2a2a2a] transition-all duration-200"
+                title="Help & Shortcuts"
+              >
+                ?
+              </button>
+            </Tooltip>
             <button
-              onClick={disconnectWallet}
-              className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#252525] text-xs text-gray-400 hover:text-white rounded-lg border border-[#2a2a2a] transition-colors"
+              onClick={() => {
+                disconnectWallet();
+                success('Logged out successfully');
+              }}
+              className="px-4 py-2.5 bg-[#0f0f0f] hover:bg-[#1a1a1a] text-sm text-gray-100 hover:text-white rounded-xl border border-[#1f1f1f] hover:border-[#2a2a2a] transition-all duration-200"
             >
               Logout
             </button>
@@ -79,32 +151,41 @@ const Layout = () => {
         </div>
       </header>
 
-      {/* Navigation - AI Assistant is primary */}
-      <nav className="px-6 py-3 border-b border-[#1f1f1f] bg-[#0f0f0f]">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActivePage(item.id)}
-              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${
-                activePage === item.id
-                  ? item.primary
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-pink-500/30 scale-105'
-                    : 'bg-[#1a73e8] text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-[#1a1a1a] text-gray-400 hover:text-white hover:bg-[#252525] border border-[#2a2a2a]'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                {item.icon && <img src={item.icon} alt="AI" className="h-3 w-3" />}
-                <span>{item.label}</span>
-              </span>
-            </button>
-          ))}
+      {/* Navigation - Larger tabs, Gemini dark mode */}
+      <nav className="px-8 py-4 border-b border-[#1f1f1f] bg-black">
+        <div className="max-w-7xl mx-auto flex items-center gap-3 overflow-x-auto">
+          {navigationItems.map((item) => {
+            const shortcut = item.id === 'assistant' ? 'Ctrl+K' :
+                            item.id === 'overview' ? 'Ctrl+1' :
+                            item.id === 'transactions' ? 'Ctrl+2' :
+                            item.id === 'market' ? 'Ctrl+3' :
+                            item.id === 'groups' ? 'Ctrl+4' : null;
+            
+            return (
+              <Tooltip key={item.id} content={shortcut ? `${item.label} (${shortcut})` : item.label}>
+                <button
+                  onClick={() => setActivePage(item.id)}
+                  className={`px-6 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                    activePage === item.id
+                      ? item.primary
+                        ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white shadow-lg shadow-purple-500/40 scale-[1.02]'
+                        : 'bg-[#1a73e8] text-white shadow-md shadow-blue-500/30 scale-[1.02]'
+                      : 'bg-[#0f0f0f] text-gray-300 hover:text-white hover:bg-[#1a1a1a] border border-[#1f1f1f] hover:border-[#2a2a2a]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    {item.icon && <img src={item.icon} alt="AI" className="h-4 w-4" />}
+                    <span>{item.label}</span>
+                  </span>
+                </button>
+              </Tooltip>
+            );
+          })}
         </div>
       </nav>
 
       {/* Main content - AI-first */}
-      <main className="flex-1 overflow-y-auto bg-[#0f0f0f]">
+      <main className="flex-1 overflow-y-auto bg-black">
         {renderPage()}
       </main>
     </div>

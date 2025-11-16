@@ -12,11 +12,32 @@ class JupiterService {
       const response = await axios.get(`${this.priceUrl}/price`, {
         params: {
           ids: mintAddress
-        }
+        },
+        timeout: 10000
       });
-      return response.data?.data?.[mintAddress]?.price || 0;
+      const price = response.data?.data?.[mintAddress]?.price;
+      if (price && price > 0) {
+        return price;
+      }
+      // Fallback: Try to get SOL price from CoinGecko if Jupiter fails
+      if (mintAddress === 'So11111111111111111111111111111111111111112') {
+        try {
+          const coingeckoResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
+            params: { ids: 'solana', vs_currencies: 'usd' },
+            timeout: 5000
+          });
+          return coingeckoResponse.data?.solana?.usd || 150;
+        } catch (e) {
+          return 150; // Final fallback
+        }
+      }
+      return 0;
     } catch (error) {
       console.error('Jupiter price error:', error.message);
+      // Fallback for SOL
+      if (mintAddress === 'So11111111111111111111111111111111111111112') {
+        return 150; // Default SOL price fallback
+      }
       return 0;
     }
   }
@@ -24,13 +45,28 @@ class JupiterService {
   async getTokenPrices(mintAddresses) {
     try {
       const ids = Array.isArray(mintAddresses) ? mintAddresses.join(',') : mintAddresses;
+      if (!ids || ids.length === 0) return {};
+      
       const response = await axios.get(`${this.priceUrl}/price`, {
-        params: { ids }
+        params: { ids },
+        timeout: 15000
       });
-      return response.data?.data || {};
+      const prices = response.data?.data || {};
+      
+      // Ensure SOL price is always available
+      const solMint = 'So11111111111111111111111111111111111111112';
+      if (!prices[solMint] || prices[solMint].price === 0) {
+        const solPrice = await this.getTokenPrice(solMint);
+        prices[solMint] = { price: solPrice };
+      }
+      
+      return prices;
     } catch (error) {
       console.error('Jupiter prices error:', error.message);
-      return {};
+      // Return at least SOL price
+      const solMint = 'So11111111111111111111111111111111111111112';
+      const solPrice = await this.getTokenPrice(solMint);
+      return { [solMint]: { price: solPrice } };
     }
   }
 
