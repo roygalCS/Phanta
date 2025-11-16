@@ -1,0 +1,86 @@
+import React from 'react';
+import { useWallet } from './WalletContext';
+import Layout from './components/Layout';
+import Onboarding from './components/Onboarding';
+import PhantaLogo from './components/PhantaLogo';
+import './App.css';
+
+const App = () => {
+  const {
+    isConnected,
+    account,
+    userData,
+    isOnboarding,
+    connectWallet,
+    completeOnboarding,
+    isLoading
+  } = useWallet();
+  
+  const [showDashboard, setShowDashboard] = React.useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-700 border-t-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400 text-sm">Connecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isConnected && isOnboarding && !userData) {
+    return (
+      <Onboarding
+        walletAddress={account}
+        onComplete={completeOnboarding}
+      />
+    );
+  }
+
+  if (isConnected && userData && showDashboard) {
+    return <Layout />;
+  }
+
+  // Ultra minimalistic Gemini dark mode style
+  return (
+    <div className="min-h-screen bg-[#0f0f0f] flex flex-col">
+
+      {/* Main content - Ultra minimal */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4">
+        <div className="w-full max-w-2xl">
+          {/* Phanta bottle logo - Large with hover animation */}
+          <div className="flex justify-center mb-16">
+            <PhantaLogo size={96} />
+          </div>
+
+          {/* Title - Ultra minimal */}
+          <h1 className="text-8xl md:text-9xl font-extralight text-center mb-20 text-white tracking-tighter">
+            Phanta
+          </h1>
+
+          {/* Main action button - With hover scale effect */}
+          <div className="flex justify-center mb-16">
+            {!isConnected ? (
+              <button
+                onClick={connectWallet}
+                className="px-10 py-4 bg-[#1a73e8] text-white rounded-full text-sm font-normal transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:shadow-blue-500/40 active:scale-105"
+              >
+                Connect Phantom Wallet
+              </button>
+            ) : isConnected && userData && !isOnboarding ? (
+              <button
+                onClick={() => setShowDashboard(true)}
+                className="px-10 py-4 bg-[#1a73e8] text-white rounded-full text-sm font-normal transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:shadow-blue-500/40 active:scale-105"
+              >
+                Launch Dashboard
+              </button>
+            ) : null}
+            </div>
+          </div>
+      </main>
+    </div>
+  );
+};
+
+export default App;

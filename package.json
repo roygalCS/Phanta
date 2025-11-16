@@ -1,0 +1,35 @@
+{
+  "name": "phanta",
+  "version": "1.0.0",
+  "description": "AI-Powered Crypto Banking Assistant for Solana",
+  "homepage": "https://github.com/roygalCS/Phanta#readme",
+  "bugs": {
+    "url": "https://github.com/roygalCS/Phanta/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roygalCS/Phanta.git"
+  },
+  "license": "ISC",
+  "author": "Roy Gal <roygalca@gmail.com>",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.0",
+    "hardhat": "^2.26.1"
+  },
+  "dependencies": {
+    "@1inch/limit-order-sdk": "^4.9.5-rc.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "chart.js": "^4.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0",
+    "react-chartjs-2": "^5.3.0"
+  }
+}

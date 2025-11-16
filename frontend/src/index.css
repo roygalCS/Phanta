@@ -1,0 +1,42 @@
+@import "tailwindcss";
+/* Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Firefox */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  /* IE and Edge */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+  }
+
+  .innershadow{
+    /* Rectangle 3 */
+
+
+background: #F3F3F3;
+box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.25);
+
+  }
+
+  .fillButton{
+    /* Rectangle 1 */
+
+box-sizing: border-box;
+
+background: linear-gradient(180deg, #FF5900 0%, #C04807 100%);
+border: 5px solid #FFFFFF;
+box-shadow: 0px 0px 9px 1px rgba(0, 0, 0, 0.69);
+border-radius: 100px;
+
+  }
+  .fillButton:hover{
+    background: linear-gradient(180deg, #FF5900 0%, #FF5900 100%);
+    transition: 0.2s;
+    box-shadow: none;
+
+  }
